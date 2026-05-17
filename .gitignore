@@ -1,8 +1,8 @@
-# Godot 4 .gitignore
-.godot/
-*.import
-export_presets.cfg
-android/
+# Android / Gradle
+.gradle/
+build/
+app/build/
+local.properties
 *.apk
 *.aab
 *.obb
@@ -10,9 +10,10 @@ android/
 # Editor
 .vs/
 .idea/
+*.iml
 *.swp
 
-# Claude Code local settings
+# Claude Code
 .claude/
 
 # OS
