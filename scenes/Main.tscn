@@ -1,0 +1,63 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/Main.gd" id="1"]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.04, 0.04, 0.12, 1)
+
+[node name="ViewContainer" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_bottom = -120.0
+
+[node name="BottomNav" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -120.0
+
+[node name="NavRow" type="HBoxContainer" parent="BottomNav"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+alignment = 1
+
+[node name="BtnPlanet" type="Button" parent="BottomNav/NavRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Planet"
+custom_minimum_size = Vector2(0, 100)
+
+[node name="BtnTransport" type="Button" parent="BottomNav/NavRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Transport"
+custom_minimum_size = Vector2(0, 100)
+
+[node name="BtnStation" type="Button" parent="BottomNav/NavRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Station"
+custom_minimum_size = Vector2(0, 100)
+
+[node name="BtnUpgrades" type="Button" parent="BottomNav/NavRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Opgrader"
+custom_minimum_size = Vector2(0, 100)
