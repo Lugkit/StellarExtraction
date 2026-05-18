@@ -1,13 +1,17 @@
 package com.lugkit.stellarextraction
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.content.Context
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import kotlin.math.max
+import kotlin.math.min
 
 data class BuildCost(
     val iron: Double = 0.0,
@@ -40,17 +44,17 @@ data class GameState(
     val ironPerSec: Double get() = when (drillHeadLevel) {
         1 -> 1.0; 2 -> 3.0; 3 -> 9.0; 4 -> 27.0; else -> 0.0
     }
-    val quartzPerSec: Double get() = if (drillHeadLevel >= 2) 0.5 else 0.0
-    val energyPerSec: Double get() = if (powerCoreLevel >= 1) 1.0 else 0.0
+    val quartzPerSec: Double   get() = if (drillHeadLevel >= 2) 0.5 else 0.0
+    val energyPerSec: Double   get() = if (powerCoreLevel >= 1) 1.0 else 0.0
     val titaniumPerSec: Double get() = if (deepShaftLevel >= 1) 0.2 else 0.0
-    val iridiumPerSec: Double get() = if (deepShaftLevel >= 2) 0.05 else 0.0
-    val xenonPerSec: Double get() = if (hasAsteroidMiner) 0.02 else 0.0
+    val iridiumPerSec: Double  get() = if (deepShaftLevel >= 2) 0.05 else 0.0
+    val xenonPerSec: Double    get() = if (hasAsteroidMiner) 0.02 else 0.0
 
-    val quartzVisible: Boolean get() = drillHeadLevel >= 2
-    val energyVisible: Boolean get() = powerCoreLevel >= 1
-    val titaniumVisible: Boolean get() = deepShaftLevel >= 1
-    val iridiumVisible: Boolean get() = deepShaftLevel >= 2
-    val xenonVisible: Boolean get() = hasAsteroidMiner
+    val quartzVisible: Boolean        get() = drillHeadLevel >= 2
+    val energyVisible: Boolean        get() = powerCoreLevel >= 1
+    val titaniumVisible: Boolean      get() = deepShaftLevel >= 1
+    val iridiumVisible: Boolean       get() = deepShaftLevel >= 2
+    val xenonVisible: Boolean         get() = hasAsteroidMiner
     val stellarShardsVisible: Boolean get() = stellarShards > 0
 
     fun canAfford(cost: BuildCost): Boolean =
@@ -58,27 +62,34 @@ data class GameState(
         energy >= cost.energy && iridium >= cost.iridium && xenon >= cost.xenon
 
     fun spend(cost: BuildCost): GameState = copy(
-        iron = iron - cost.iron,
-        quartz = quartz - cost.quartz,
+        iron     = iron     - cost.iron,
+        quartz   = quartz   - cost.quartz,
         titanium = titanium - cost.titanium,
-        energy = energy - cost.energy,
-        iridium = iridium - cost.iridium,
-        xenon = xenon - cost.xenon
+        energy   = energy   - cost.energy,
+        iridium  = iridium  - cost.iridium,
+        xenon    = xenon    - cost.xenon
+    )
+
+    fun applyProduction(seconds: Double): GameState = copy(
+        iron     = iron     + ironPerSec     * seconds,
+        quartz   = quartz   + quartzPerSec   * seconds,
+        energy   = energy   + energyPerSec   * seconds,
+        titanium = titanium + titaniumPerSec * seconds,
+        iridium  = iridium  + iridiumPerSec  * seconds,
+        xenon    = xenon    + xenonPerSec    * seconds
     )
 }
 
 val drillHeadCosts = mapOf(
     1 to BuildCost(iron = 10.0),
     2 to BuildCost(iron = 400.0),
-    3 to BuildCost(iron = 5_000.0, energy = 80.0),
+    3 to BuildCost(iron = 5_000.0,  energy = 80.0),
     4 to BuildCost(iron = 28_000.0, titanium = 1_000.0)
 )
-
 val deepShaftCosts = mapOf(
     1 to BuildCost(iron = 8_000.0),
     2 to BuildCost(iron = 40_000.0, titanium = 1_000.0)
 )
-
 val powerCoreCost      = BuildCost(iron = 1_500.0,  quartz = 200.0)
 val launchSiloCost     = BuildCost(iron = 28_000.0, titanium = 500.0)
 val relaySatelliteCost = BuildCost(iron = 80_000.0, titanium = 2_000.0)
@@ -87,26 +98,76 @@ val asteroidMinerCost  = BuildCost(iridium = 10_000.0)
 val coreTapCost        = BuildCost(xenon = 500.0)
 val planetCoreCost     = BuildCost(xenon = 2_000.0)
 
-class GameViewModel : ViewModel() {
+class GameViewModel(application: Application) : AndroidViewModel(application) {
+    private val prefs = application.getSharedPreferences("stellar_game", Context.MODE_PRIVATE)
+
     private val _state = MutableStateFlow(GameState())
     val state: StateFlow<GameState> = _state.asStateFlow()
 
     init {
+        loadAndApplyOfflineProgress()
         viewModelScope.launch {
+            var tick = 0
             while (true) {
                 delay(1000)
-                _state.value = _state.value.let { s ->
-                    s.copy(
-                        iron     = s.iron     + s.ironPerSec,
-                        quartz   = s.quartz   + s.quartzPerSec,
-                        energy   = s.energy   + s.energyPerSec,
-                        titanium = s.titanium + s.titaniumPerSec,
-                        iridium  = s.iridium  + s.iridiumPerSec,
-                        xenon    = s.xenon    + s.xenonPerSec
-                    )
-                }
+                _state.value = _state.value.applyProduction(1.0)
+                if (++tick % 30 == 0) saveState()
             }
         }
+    }
+
+    fun saveState() {
+        try {
+            val s = _state.value
+            val json = JSONObject().apply {
+                put("iron",             s.iron)
+                put("quartz",           s.quartz)
+                put("titanium",         s.titanium)
+                put("iridium",          s.iridium)
+                put("xenon",            s.xenon)
+                put("energy",           s.energy)
+                put("stellarShards",    s.stellarShards)
+                put("drillHeadLevel",   s.drillHeadLevel)
+                put("powerCoreLevel",   s.powerCoreLevel)
+                put("deepShaftLevel",   s.deepShaftLevel)
+                put("hasLaunchSilo",    s.hasLaunchSilo)
+                put("hasRelaySatellite",s.hasRelaySatellite)
+                put("hasOrbitalLab",    s.hasOrbitalLab)
+                put("hasAsteroidMiner", s.hasAsteroidMiner)
+                put("hasCoreTap",       s.hasCoreTap)
+                put("hasPlanetCore",    s.hasPlanetCore)
+                put("savedAt",          System.currentTimeMillis())
+            }.toString()
+            prefs.edit().putString("game_state", json).apply()
+        } catch (_: Exception) {}
+    }
+
+    private fun loadAndApplyOfflineProgress() {
+        try {
+            val raw = prefs.getString("game_state", null) ?: return
+            val obj = JSONObject(raw)
+            val savedAt = obj.getLong("savedAt")
+            val elapsed = min((System.currentTimeMillis() - savedAt) / 1000.0, 8.0 * 3600)
+            val s = GameState(
+                iron              = obj.getDouble("iron"),
+                quartz            = obj.getDouble("quartz"),
+                titanium          = obj.getDouble("titanium"),
+                iridium           = obj.getDouble("iridium"),
+                xenon             = obj.getDouble("xenon"),
+                energy            = obj.getDouble("energy"),
+                stellarShards     = obj.getInt("stellarShards"),
+                drillHeadLevel    = obj.getInt("drillHeadLevel"),
+                powerCoreLevel    = obj.getInt("powerCoreLevel"),
+                deepShaftLevel    = obj.getInt("deepShaftLevel"),
+                hasLaunchSilo     = obj.getBoolean("hasLaunchSilo"),
+                hasRelaySatellite = obj.getBoolean("hasRelaySatellite"),
+                hasOrbitalLab     = obj.getBoolean("hasOrbitalLab"),
+                hasAsteroidMiner  = obj.getBoolean("hasAsteroidMiner"),
+                hasCoreTap        = obj.getBoolean("hasCoreTap"),
+                hasPlanetCore     = obj.getBoolean("hasPlanetCore")
+            )
+            _state.value = if (elapsed > 1) s.applyProduction(elapsed) else s
+        } catch (_: Exception) {}
     }
 
     fun strike() {
@@ -140,8 +201,7 @@ class GameViewModel : ViewModel() {
     fun buyDeepShaft() {
         val s = _state.value
         val next = s.deepShaftLevel + 1
-        val minDrill = if (next == 1) 3 else 4
-        if (s.drillHeadLevel < minDrill) return
+        if (s.drillHeadLevel < if (next == 1) 3 else 4) return
         val cost = deepShaftCosts[next] ?: return
         if (!s.canAfford(cost)) return
         _state.value = s.spend(cost).copy(deepShaftLevel = next)
@@ -193,5 +253,6 @@ class GameViewModel : ViewModel() {
         val s = _state.value
         if (!s.hasPlanetCore) return
         _state.value = GameState(stellarShards = s.stellarShards + 1)
+        saveState()
     }
 }
