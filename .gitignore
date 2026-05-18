@@ -1,21 +1,10 @@
-# Android / Gradle
-.gradle/
-build/
-app/build/
-local.properties
-*.apk
-*.aab
-*.obb
-
-# Editor
-.vs/
-.idea/
 *.iml
-*.swp
-
-# Claude Code
-.claude/
-
-# OS
+.gradle
+/local.properties
+/.idea
 .DS_Store
-Thumbs.db
+/build
+/captures
+.externalNativeBuild
+.cxx
+app/build

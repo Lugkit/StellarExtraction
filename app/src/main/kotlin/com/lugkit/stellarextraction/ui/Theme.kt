@@ -1,35 +1,31 @@
 package com.lugkit.stellarextraction.ui
 
-import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-val SpaceBlack   = Color(0xFF050A18)
-val SpaceDark    = Color(0xFF0D1B2A)
-val SpacePanel   = Color(0xFF112240)
-val SpaceAccent  = Color(0xFF00B4D8)
-val SpaceAccent2 = Color(0xFF7B2FBE)
-val SpaceText    = Color(0xFFCCD6F6)
-val SpaceSubtext = Color(0xFF8892B0)
+private val SpaceBlack = Color(0xFF0A0F1E)
+private val SpaceSurface = Color(0xFF111827)
+private val SpaceAccent = Color(0xFF00D4FF)
+private val SpaceText = Color(0xFFE0E0E0)
+private val SpaceDim = Color(0xFF6B7280)
 
-private val DarkColors = darkColorScheme(
-    primary          = SpaceAccent,
-    onPrimary        = Color.Black,
-    secondary        = SpaceAccent2,
-    onSecondary      = Color.White,
-    background       = SpaceBlack,
-    onBackground     = SpaceText,
-    surface          = SpacePanel,
-    onSurface        = SpaceText,
-    surfaceVariant   = SpaceDark,
-    onSurfaceVariant = SpaceSubtext,
-    outline          = SpaceAccent.copy(alpha = 0.3f)
+private val ColorScheme = darkColorScheme(
+    primary = SpaceAccent,
+    onPrimary = Color(0xFF000000),
+    background = SpaceBlack,
+    onBackground = SpaceText,
+    surface = SpaceSurface,
+    onSurface = SpaceText,
+    surfaceVariant = Color(0xFF1F2937),
+    onSurfaceVariant = SpaceDim
 )
 
 @Composable
-fun StellarTheme(content: @Composable () -> Unit) {
+fun StellarExtractionTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = DarkColors,
+        colorScheme = ColorScheme,
         content = content
     )
 }
