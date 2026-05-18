@@ -70,6 +70,8 @@ fun GameScreen(vm: GameViewModel) {
         ) {
             val canAfford = state.iron >= state.drillCost
             val lineColor = if (canAfford) AsteroidsGreen else AsteroidsGreen.copy(alpha = 0.2f)
+            val levelLabel = if (state.drillLevel == 0) "LVL 0 → 1"
+                             else "LVL ${state.drillLevel} → ${state.drillLevel + 1}"
             Row(
                 modifier = Modifier
                     .border(width = 1.dp, color = lineColor, shape = RoundedCornerShape(2.dp))
@@ -84,6 +86,13 @@ fun GameScreen(vm: GameViewModel) {
                     fontFamily = FontFamily.Monospace,
                     fontSize = 13.sp,
                     letterSpacing = 2.sp
+                )
+                Text(
+                    text = levelLabel,
+                    color = lineColor.copy(alpha = 0.6f),
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                    letterSpacing = 1.sp
                 )
                 Text(
                     text = "[ ${formatNumber(state.drillCost)} ]",
