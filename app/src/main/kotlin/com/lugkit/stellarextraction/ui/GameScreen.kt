@@ -140,7 +140,7 @@ fun formatRate(n: Double): String = when {
     n >= 1_000_000_000 -> "%.1fB".format(n / 1_000_000_000)
     n >= 1_000_000 -> "%.1fM".format(n / 1_000_000)
     n >= 1_000 -> "%.1fK".format(n / 1_000)
-    else -> "%.1f".format(n)
+    else -> "%.2f".format(n)
 }
 
 fun formatNumber(n: Double): String = when {
