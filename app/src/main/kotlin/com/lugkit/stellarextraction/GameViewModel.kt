@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlin.math.pow
 
 data class GameState(
     val iron: Double = 0.0,
@@ -40,11 +41,12 @@ class GameViewModel : ViewModel() {
     fun upgradeDrill() {
         val s = _state.value
         if (s.iron >= s.drillCost) {
+            val newLevel = s.drillLevel + 1
             _state.value = s.copy(
                 iron = s.iron - s.drillCost,
                 ironPerClick = s.ironPerClick + 1.0,
-                ironPerSecond = s.ironPerSecond + 0.1,
-                drillLevel = s.drillLevel + 1,
+                ironPerSecond = 0.1 * 1.1.pow(newLevel - 1),
+                drillLevel = newLevel,
                 drillCost = s.drillCost * 1.5
             )
         }
