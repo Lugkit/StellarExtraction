@@ -37,6 +37,7 @@ fun GameScreen(vm: GameViewModel) {
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
+            .navigationBarsPadding()
     ) {
         TopMenu(iron = state.iron, ironPerSecond = state.ironPerSecond)
 
