@@ -46,7 +46,7 @@ class GameViewModel : ViewModel() {
                 iron = s.iron - s.drillCost,
                 ironPerSecond = 0.1 * 1.1.pow(newLevel - 1),
                 drillLevel = newLevel,
-                drillCost = s.drillCost * 1.5
+                drillCost = s.drillCost * 1.15
             )
         }
     }
