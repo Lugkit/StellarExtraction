@@ -6,8 +6,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,8 +38,17 @@ fun GameScreen(vm: GameViewModel) {
     if (showMenu) {
         MenuScreen(
             state = state,
-            onUpgradeDrill = vm::upgradeDrill,
-            onClose = { showMenu = false }
+            onBuyDrillHead      = vm::buyDrillHead,
+            onBuyPowerCore      = vm::buyPowerCore,
+            onBuyDeepShaft      = vm::buyDeepShaft,
+            onBuyLaunchSilo     = vm::buyLaunchSilo,
+            onBuyRelaySatellite = vm::buyRelaySatellite,
+            onBuyOrbitalLab     = vm::buyOrbitalLab,
+            onBuyAsteroidMiner  = vm::buyAsteroidMiner,
+            onBuyCoreTap        = vm::buyCoreTap,
+            onBuyPlanetCore     = vm::buyPlanetCore,
+            onAscend            = vm::ascend,
+            onClose             = { showMenu = false }
         )
     } else {
         Column(
@@ -47,24 +58,19 @@ fun GameScreen(vm: GameViewModel) {
                 .statusBarsPadding()
                 .navigationBarsPadding()
         ) {
-            TopMenu(
-                iron = state.iron,
-                ironPerSecond = state.ironPerSecond,
-                onMenuClick = { showMenu = true }
-            )
+            TopMenu(state = state, onMenuClick = { showMenu = true })
 
             Box(
-                modifier = Modifier
-                    .fillMaxSize(),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    Planet(onClick = vm::mine)
+                    Planet(onClick = vm::strike)
                     Text(
-                        text = "[ TAP TO MINE ]",
+                        text = "[ STRIKE ]",
                         color = AsteroidsGreen.copy(alpha = 0.4f),
                         fontFamily = FontFamily.Monospace,
                         fontSize = 11.sp,
@@ -99,7 +105,7 @@ fun Planet(onClick: () -> Unit) {
     ) {
         val cx = size.width / 2
         val cy = size.height / 2
-        val r = size.minDimension / 2 * 0.82f
+        val r  = size.minDimension / 2 * 0.82f
         val green = AsteroidsGreen
 
         drawCircle(
@@ -135,7 +141,7 @@ fun Planet(onClick: () -> Unit) {
 }
 
 @Composable
-fun TopMenu(iron: Double, ironPerSecond: Double, onMenuClick: () -> Unit) {
+fun TopMenu(state: com.lugkit.stellarextraction.GameState, onMenuClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -144,7 +150,7 @@ fun TopMenu(iron: Double, ironPerSecond: Double, onMenuClick: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "STELLAR EXTRACTION",
                 color = AsteroidsGreen,
@@ -153,11 +159,27 @@ fun TopMenu(iron: Double, ironPerSecond: Double, onMenuClick: () -> Unit) {
                 fontSize = 11.sp,
                 letterSpacing = 3.sp
             )
-            Spacer(modifier = Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ResourceChip(label = "IRON", amount = iron, rate = ironPerSecond)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                ResourceChip(label = "IRON",     amount = state.iron,     rate = state.ironPerSec)
+                if (state.quartzVisible)
+                    ResourceChip(label = "QUARTZ",   amount = state.quartz,   rate = state.quartzPerSec)
+                if (state.energyVisible)
+                    ResourceChip(label = "ENERGY",   amount = state.energy,   rate = state.energyPerSec)
+                if (state.titaniumVisible)
+                    ResourceChip(label = "TITAN",    amount = state.titanium, rate = state.titaniumPerSec)
+                if (state.iridiumVisible)
+                    ResourceChip(label = "IRIDIUM",  amount = state.iridium,  rate = state.iridiumPerSec)
+                if (state.xenonVisible)
+                    ResourceChip(label = "XENON",    amount = state.xenon,    rate = state.xenonPerSec)
+                if (state.stellarShardsVisible)
+                    ResourceChip(label = "SHARDS",   amount = state.stellarShards.toDouble(), rate = 0.0)
             }
         }
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = "[ MENU ]",
             color = AsteroidsGreen.copy(alpha = 0.6f),
@@ -174,31 +196,31 @@ fun ResourceChip(label: String, amount: Double, rate: Double) {
     Row(
         modifier = Modifier
             .border(width = 1.dp, color = AsteroidsGreen.copy(alpha = 0.3f), shape = RoundedCornerShape(2.dp))
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = 10.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
             color = AsteroidsGreen.copy(alpha = 0.5f),
             fontFamily = FontFamily.Monospace,
-            fontSize = 10.sp,
+            fontSize = 9.sp,
             letterSpacing = 1.sp
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(6.dp))
         Text(
             text = formatNumber(amount),
             color = AsteroidsGreen,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            fontSize = 16.sp
+            fontSize = 15.sp
         )
         if (rate > 0) {
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(5.dp))
             Text(
                 text = "+${formatRate(rate)}/s",
                 color = AsteroidsGreen.copy(alpha = 0.55f),
                 fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp
+                fontSize = 10.sp
             )
         }
     }
@@ -206,14 +228,14 @@ fun ResourceChip(label: String, amount: Double, rate: Double) {
 
 fun formatRate(n: Double): String = when {
     n >= 1_000_000_000 -> "%.1fB".format(n / 1_000_000_000)
-    n >= 1_000_000 -> "%.1fM".format(n / 1_000_000)
-    n >= 1_000 -> "%.1fK".format(n / 1_000)
-    else -> "%.2f".format(n)
+    n >= 1_000_000     -> "%.1fM".format(n / 1_000_000)
+    n >= 1_000         -> "%.1fK".format(n / 1_000)
+    else               -> "%.2f".format(n)
 }
 
 fun formatNumber(n: Double): String = when {
     n >= 1_000_000_000 -> "%.1fB".format(n / 1_000_000_000)
-    n >= 1_000_000 -> "%.1fM".format(n / 1_000_000)
-    n >= 1_000 -> "%.1fK".format(n / 1_000)
-    else -> floor(n).toInt().toString()
+    n >= 1_000_000     -> "%.1fM".format(n / 1_000_000)
+    n >= 1_000         -> "%.1fK".format(n / 1_000)
+    else               -> floor(n).toInt().toString()
 }
