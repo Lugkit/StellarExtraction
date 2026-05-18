@@ -1,20 +1,32 @@
 package com.lugkit.stellarextraction.ui
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lugkit.stellarextraction.GameViewModel
 import kotlin.math.floor
+import kotlin.math.max
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 @Composable
 fun GameScreen(vm: GameViewModel) {
@@ -26,47 +38,119 @@ fun GameScreen(vm: GameViewModel) {
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
     ) {
-        TopMenu(
-            iron = state.iron,
-            ironPerSecond = state.ironPerSecond
-        )
+        TopMenu(iron = state.iron, ironPerSecond = state.ironPerSecond)
 
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                Button(onClick = vm::mine) {
-                    Text(
-                        text = "MINE  +${formatNumber(state.ironPerClick)} iron",
-                        fontFamily = FontFamily.Monospace
-                    )
-                }
-                Button(
-                    onClick = vm::upgradeDrill,
-                    enabled = state.iron >= state.drillCost,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF1F2937),
-                        contentColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Text(
-                        text = "Upgrade Drill  [${formatNumber(state.drillCost)} iron]",
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp
-                    )
-                }
-                if (state.drillLevel > 0) {
-                    Text(
-                        text = "Drill level ${state.drillLevel}",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 12.sp
-                    )
-                }
+                Planet(onClick = vm::mine)
+                Text(
+                    text = "[ TAP TO MINE ]",
+                    color = AsteroidsGreen.copy(alpha = 0.4f),
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                    letterSpacing = 3.sp
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            val canAfford = state.iron >= state.drillCost
+            val lineColor = if (canAfford) AsteroidsGreen else AsteroidsGreen.copy(alpha = 0.2f)
+            Row(
+                modifier = Modifier
+                    .border(width = 1.dp, color = lineColor, shape = RoundedCornerShape(2.dp))
+                    .clickable(enabled = canAfford) { vm.upgradeDrill() }
+                    .padding(horizontal = 24.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "UPGRADE DRILL",
+                    color = lineColor,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 13.sp,
+                    letterSpacing = 2.sp
+                )
+                Text(
+                    text = "[ ${formatNumber(state.drillCost)} ]",
+                    color = lineColor.copy(alpha = 0.7f),
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 12.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun Planet(onClick: () -> Unit) {
+    var tapped by remember { mutableStateOf(false) }
+    val glow by animateFloatAsState(
+        targetValue = if (tapped) 1f else 0.4f,
+        animationSpec = tween(durationMillis = if (tapped) 60 else 500),
+        finishedListener = { if (tapped) tapped = false },
+        label = "planetGlow"
+    )
+
+    Canvas(
+        modifier = Modifier
+            .size(260.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                tapped = true
+                onClick()
+            }
+    ) {
+        val cx = size.width / 2
+        val cy = size.height / 2
+        val r = size.minDimension / 2 * 0.82f
+        val green = AsteroidsGreen
+
+        // Main circle outline
+        drawCircle(
+            color = green.copy(alpha = glow),
+            radius = r,
+            center = Offset(cx, cy),
+            style = Stroke(width = 2.5f)
+        )
+
+        // Latitude rings at -0.5, 0, +0.5 of radius
+        for (t in listOf(-0.5f, 0f, 0.5f)) {
+            val latY = cy + t * r
+            val latR = sqrt(max(0f, r * r - (t * r).pow(2)))
+            val h = latR * 0.28f
+            drawOval(
+                color = green.copy(alpha = glow * 0.4f),
+                topLeft = Offset(cx - latR, latY - h),
+                size = Size(latR * 2, h * 2),
+                style = Stroke(width = 1.5f)
+            )
+        }
+
+        // Longitude rings at 0°, 40°, -40°
+        for (angle in listOf(0f, 40f, -40f)) {
+            rotate(degrees = angle) {
+                drawOval(
+                    color = green.copy(alpha = glow * 0.4f),
+                    topLeft = Offset(cx - r * 0.18f, cy - r),
+                    size = Size(r * 0.36f, r * 2),
+                    style = Stroke(width = 1.5f)
+                )
             }
         }
     }
@@ -82,7 +166,7 @@ fun TopMenu(iron: Double, ironPerSecond: Double) {
     ) {
         Text(
             text = "STELLAR EXTRACTION",
-            color = MaterialTheme.colorScheme.primary,
+            color = AsteroidsGreen,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
             fontSize = 11.sp,
@@ -90,28 +174,22 @@ fun TopMenu(iron: Double, ironPerSecond: Double) {
         )
         Spacer(modifier = Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ResourceChip(
-                label = "IRON",
-                amount = iron,
-                rate = ironPerSecond,
-                color = Color(0xFFB0BEC5)
-            )
+            ResourceChip(label = "IRON", amount = iron, rate = ironPerSecond)
         }
     }
 }
 
 @Composable
-fun ResourceChip(label: String, amount: Double, rate: Double, color: Color) {
+fun ResourceChip(label: String, amount: Double, rate: Double) {
     Row(
         modifier = Modifier
-            .background(color = color.copy(alpha = 0.08f), shape = RoundedCornerShape(6.dp))
-            .border(width = 1.dp, color = color.copy(alpha = 0.25f), shape = RoundedCornerShape(6.dp))
+            .border(width = 1.dp, color = AsteroidsGreen.copy(alpha = 0.3f), shape = RoundedCornerShape(2.dp))
             .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
-            color = color.copy(alpha = 0.6f),
+            color = AsteroidsGreen.copy(alpha = 0.5f),
             fontFamily = FontFamily.Monospace,
             fontSize = 10.sp,
             letterSpacing = 1.sp
@@ -119,7 +197,7 @@ fun ResourceChip(label: String, amount: Double, rate: Double, color: Color) {
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = formatNumber(amount),
-            color = color,
+            color = AsteroidsGreen,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp
@@ -128,7 +206,7 @@ fun ResourceChip(label: String, amount: Double, rate: Double, color: Color) {
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = "+${formatRate(rate)}/s",
-                color = color.copy(alpha = 0.55f),
+                color = AsteroidsGreen.copy(alpha = 0.55f),
                 fontFamily = FontFamily.Monospace,
                 fontSize = 11.sp
             )
