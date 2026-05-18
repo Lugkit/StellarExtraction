@@ -127,13 +127,20 @@ fun ResourceChip(label: String, amount: Double, rate: Double, color: Color) {
         if (rate > 0) {
             Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = "+${formatNumber(rate)}/s",
+                text = "+${formatRate(rate)}/s",
                 color = color.copy(alpha = 0.55f),
                 fontFamily = FontFamily.Monospace,
                 fontSize = 11.sp
             )
         }
     }
+}
+
+fun formatRate(n: Double): String = when {
+    n >= 1_000_000_000 -> "%.1fB".format(n / 1_000_000_000)
+    n >= 1_000_000 -> "%.1fM".format(n / 1_000_000)
+    n >= 1_000 -> "%.1fK".format(n / 1_000)
+    else -> "%.1f".format(n)
 }
 
 fun formatNumber(n: Double): String = when {

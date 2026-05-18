@@ -44,7 +44,6 @@ class GameViewModel : ViewModel() {
             val newLevel = s.drillLevel + 1
             _state.value = s.copy(
                 iron = s.iron - s.drillCost,
-                ironPerClick = s.ironPerClick + 1.0,
                 ironPerSecond = 0.1 * 1.1.pow(newLevel - 1),
                 drillLevel = newLevel,
                 drillCost = s.drillCost * 1.5
