@@ -1,8 +1,12 @@
 package com.lugkit.stellarextraction.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -180,6 +184,8 @@ private fun MineContent(vm: GameViewModel) {
                 }
             }
         }
+
+        FlybyOverlay()
 
         if (showResetDialog) {
             ResetDialog(
@@ -534,6 +540,106 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawBuildings(
         drawLine(col, center-tv*wingW, center-tv*cw, sw*0.6f)
         drawLine(col, center+tv*cw, center+tv*wingW, sw*0.6f)
     }
+}
+
+// ── Flyby easter egg ─────────────────────────────────────────────────────────
+
+@Composable
+private fun FlybyOverlay() {
+    val animProgress = remember { Animatable(0f) }
+    var isAnimating  by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            // 90–150 s between appearances
+            delay((90_000L..150_000L).random())
+            isAnimating = true
+            animProgress.snapTo(0f)
+            animProgress.animateTo(1f, animationSpec = tween(4200, easing = LinearEasing))
+            isAnimating = false
+        }
+    }
+
+    if (isAnimating) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            flybyScene(animProgress.value)
+        }
+    }
+}
+
+private fun DrawScope.flybyScene(p: Float) {
+    val col = AsteroidsGreen.copy(alpha = 0.45f)
+    val sw  = 1.5f
+    val w   = size.width
+    val h   = size.height
+
+    // Asteroid + ship: left → right across middle of planet area
+    val mainY = h * 0.40f
+    val astP  = ((p * 1.08f) - 0.04f).coerceIn(0f, 1f)
+    val shipP = ((p * 1.08f) - 0.10f).coerceIn(0f, 1f)
+    val astX  = flyLerp(-44f, w + 44f, astP)
+    val shipX = flyLerp(-100f, w + 16f, shipP)
+    drawFlybyAsteroid(Offset(astX,  mainY - 6f), 16f, p * 480f, col, sw)
+    drawFlybyShip(    Offset(shipX, mainY + 8f), 13f, 90f,       col, sw)
+
+    // UFO: right → left, slightly higher and faster
+    val ufoP = ((p * 1.25f) - 0.12f).coerceIn(0f, 1f)
+    val ufoX = flyLerp(w + 32f, -32f, ufoP)
+    drawFlybyUFO(Offset(ufoX, mainY - 40f), 13f, col, sw)
+}
+
+private fun flyLerp(a: Float, b: Float, t: Float) = a + (b - a) * t
+
+private fun flyRotate(x: Float, y: Float, deg: Float): Offset {
+    val r = Math.toRadians(deg.toDouble())
+    val c = cos(r).toFloat(); val s = sin(r).toFloat()
+    return Offset(x * c - y * s, x * s + y * c)
+}
+
+// Simple triangle — faithful to the original Atari Asteroids ship
+private fun DrawScope.drawFlybyShip(center: Offset, size: Float, angleDeg: Float, col: Color, sw: Float) {
+    fun v(x: Float, y: Float) = center + flyRotate(x, y, angleDeg)
+    val nose = v(0f,           -size)
+    val rearL = v(-size * 0.7f, size * 0.85f)
+    val rearR = v( size * 0.7f, size * 0.85f)
+    drawLine(col, nose, rearL, sw)
+    drawLine(col, nose, rearR, sw)
+    drawLine(col, rearL, rearR, sw)
+}
+
+// 12-vertex irregular polygon — Asteroids large asteroid
+private fun DrawScope.drawFlybyAsteroid(center: Offset, size: Float, rotDeg: Float, col: Color, sw: Float) {
+    val angStep = 30f
+    val radii = floatArrayOf(1.0f, 0.78f, 0.92f, 0.68f, 0.88f, 0.65f, 1.0f, 0.75f, 0.9f, 0.68f, 0.85f, 0.92f)
+    val pts = (0..11).map { i ->
+        val a = Math.toRadians(((i * angStep) + rotDeg).toDouble())
+        center + Offset(cos(a).toFloat() * size * radii[i], sin(a).toFloat() * size * radii[i])
+    }
+    for (i in pts.indices) drawLine(col, pts[i], pts[(i + 1) % pts.size], sw)
+}
+
+// Large saucer: wide flat body + dome on top + gun turret at bottom
+private fun DrawScope.drawFlybyUFO(center: Offset, size: Float, col: Color, sw: Float) {
+    // Main body — wide flat oval
+    drawOval(col,
+        topLeft = Offset(center.x - size, center.y - size * 0.32f),
+        size    = Size(size * 2f, size * 0.64f),
+        style   = Stroke(sw))
+    // Dome — smaller ellipse sitting on top of body
+    drawOval(col,
+        topLeft = Offset(center.x - size * 0.52f, center.y - size * 0.75f),
+        size    = Size(size * 1.04f, size * 0.46f),
+        style   = Stroke(sw))
+    // Flat bottom line (gun platform)
+    drawLine(col,
+        Offset(center.x - size * 0.72f, center.y + size * 0.32f),
+        Offset(center.x + size * 0.72f, center.y + size * 0.32f),
+        sw * 0.8f)
+    // Centre turret nub
+    drawLine(col,
+        Offset(center.x, center.y + size * 0.32f),
+        Offset(center.x, center.y + size * 0.55f),
+        sw)
 }
 
 fun formatRate(n: Double): String = when {
