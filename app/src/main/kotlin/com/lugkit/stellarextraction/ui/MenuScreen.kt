@@ -17,124 +17,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lugkit.stellarextraction.*
 
-@Composable
-fun ShopScreen(
-    state: GameState,
-    onBuyDrillHead: () -> Unit,
-    onBuyPowerCore: () -> Unit,
-    onBuySolarArray: () -> Unit,
-    onBuyDeepShaft: () -> Unit,
-    onBuyRefinery: () -> Unit,
-    onBuyLaunchSiloA: () -> Unit,
-    onBuyLaunchSiloB: () -> Unit,
-    onBuyRelaySatellite: () -> Unit,
-    onBuyOrbitalLab: () -> Unit,
-    onBuyAsteroidMiner: () -> Unit,
-    onBuyOrbitalSolarStation: () -> Unit,
-    onBuyCoreTap: () -> Unit,
-    onBuyPlanetCore: () -> Unit,
-    onAscend: () -> Unit,
-    onRefineryConvert: (Resource) -> Unit,
-    onClose: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-    ) {
-        FullScreenHeader(title = "SHOP")
-        Box(modifier = Modifier.weight(1f)) {
-            ShopTab(
-                state, onBuyDrillHead, onBuyPowerCore, onBuySolarArray,
-                onBuyDeepShaft, onBuyRefinery, onBuyLaunchSiloA, onBuyLaunchSiloB,
-                onBuyRelaySatellite, onBuyOrbitalLab, onBuyAsteroidMiner,
-                onBuyOrbitalSolarStation, onBuyCoreTap, onBuyPlanetCore,
-                onAscend, onRefineryConvert
-            )
-        }
-        BottomNav(onClose = onClose)
-    }
-}
-
-@Composable
-fun TreeScreen(state: GameState, onClose: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-    ) {
-        FullScreenHeader(title = "TECH TREE")
-        Box(modifier = Modifier.weight(1f)) {
-            TreeTab(state)
-        }
-        BottomNav(onClose = onClose)
-    }
-}
-
-@Composable
-private fun FullScreenHeader(title: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFF050505))
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        Text(
-            text = title,
-            color = AsteroidsGreen,
-            fontFamily = AsteroidsFont,
-            fontWeight = FontWeight.Bold,
-            fontSize = 11.sp,
-            letterSpacing = 3.sp
-        )
-    }
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(1.dp)
-            .background(AsteroidsGreen.copy(alpha = 0.2f))
-    )
-}
-
-@Composable
-private fun BottomNav(onClose: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(1.dp)
-            .background(AsteroidsGreen.copy(alpha = 0.2f))
-    )
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 14.dp),
-        horizontalArrangement = Arrangement.Center
-    ) {
-        NavLink(label = "BACK", onClick = onClose)
-    }
-}
-
-@Composable
-fun MenuTabButton(label: String, selected: Boolean, onClick: () -> Unit) {
-    val borderColor = if (selected) AsteroidsGreen else AsteroidsGreen.copy(alpha = 0.25f)
-    val textColor   = if (selected) AsteroidsGreen else AsteroidsGreen.copy(alpha = 0.4f)
-    Text(
-        text = label,
-        color = textColor,
-        fontFamily = AsteroidsFont,
-        fontSize = 12.sp,
-        letterSpacing = 2.sp,
-        modifier = Modifier
-            .border(width = 1.dp, color = borderColor, shape = RoundedCornerShape(2.dp))
-            .clickable { onClick() }
-            .padding(horizontal = 20.dp, vertical = 8.dp)
-    )
-}
-
 // ── SHOP ─────────────────────────────────────────────────────────────────────
 
 @Composable
@@ -194,10 +76,10 @@ fun ShopTab(
                 )
             }
 
-            if (state.solarArrayLevel < 2) {
+            if (state.powerCoreLevel >= 1 && state.solarArrayLevel < 2) {
                 val next = state.solarArrayLevel + 1
                 val cost = solarArrayCosts[next]!!
-                val prod = next // lv1=1, lv2=2
+                val prod = next
                 UpgradeCard(
                     name        = "SOLAR ARRAY",
                     description = "$prod energy/sec  •  no upkeep",
@@ -481,83 +363,184 @@ private fun CostLine(text: String, hasEnough: Boolean) {
 
 // ── PROGRESSION TREE ─────────────────────────────────────────────────────────
 
-private class TreeEntry(
-    val label: String,
-    val detail: String,
-    val lockedHint: String,
-    val isUnlocked: (GameState) -> Boolean
-)
-
-private val treeEntries = listOf(
-    TreeEntry("PICKAXE",                "Manual strike mining",           "ACTIVE")             { true },
-    TreeEntry("DRILL HEAD LV.1",        "1 iron/sec",                     "BUY IN SHOP")         { it.drillHeadLevel >= 1 },
-    TreeEntry("DRILL HEAD LV.2",        "3 iron/sec  +  quartz",          "NEED DRILL LV.1")     { it.drillHeadLevel >= 2 },
-    TreeEntry("POWER CORE",             "3 energy/sec  •  1 quartz/sec upkeep", "NEED DRILL LV.2") { it.powerCoreLevel >= 1 },
-    TreeEntry("SOLAR ARRAY LV.1",       "1 energy/sec  •  no upkeep",     "NEED DRILL LV.2")     { it.solarArrayLevel >= 1 },
-    TreeEntry("SOLAR ARRAY LV.2",       "2 energy/sec  •  no upkeep",     "NEED SOLAR LV.1")     { it.solarArrayLevel >= 2 },
-    TreeEntry("DRILL HEAD LV.3",        "9 iron/sec",                     "NEED DRILL LV.2")     { it.drillHeadLevel >= 3 },
-    TreeEntry("DEEP SHAFT",             "0.5 titanium/sec",               "NEED DRILL LV.3")     { it.deepShaftLevel >= 1 },
-    TreeEntry("REFINERY",               "Downward resource conversion",   "NEED DRILL LV.3")     { it.hasRefinery },
-    TreeEntry("LAUNCH SILO (PATH A)",   "28K iron + 500 titan",           "NEED DEEP SHAFT")     { it.hasLaunchSilo },
-    TreeEntry("LAUNCH SILO (PATH B)",   "15K iron + 2K quartz",           "NEED DRILL LV.3")     { it.hasLaunchSilo },
-    TreeEntry("DRILL HEAD LV.4",        "27 iron/sec",                    "NEED DRILL LV.3")     { it.drillHeadLevel >= 4 },
-    TreeEntry("DEEP SHAFT LV.2",        "0.15 iridium/sec",               "NEED DRILL LV.4")     { it.deepShaftLevel >= 2 },
-    TreeEntry("RELAY SATELLITE",        "Orbital communications",          "NEED SILO")           { it.hasRelaySatellite },
-    TreeEntry("ORBITAL LAB",            "Advanced research",               "NEED RELAY")          { it.hasOrbitalLab },
-    TreeEntry("ASTEROID MINER",         "0.05 xenon/sec",                 "NEED LAB")            { it.hasAsteroidMiner },
-    TreeEntry("ORBITAL SOLAR STATION",  "20 energy/sec  •  no upkeep",    "NEED LAB + SOLAR LV2") { it.hasOrbitalSolarStation },
-    TreeEntry("CORE TAP",               "Planet core access",              "NEED DRILL LV.4")     { it.hasCoreTap },
-    TreeEntry("PLANET CORE",            "Pre-ascension",                   "NEED CORE TAP")       { it.hasPlanetCore },
-    TreeEntry("ASCEND",                 "Reset  →  +1 Stellar Shard",     "NEED PLANET CORE")    { it.stellarShards > 0 },
-    TreeEntry("STELLAR SHARDS",         "Permanent prestige currency",     "ASCEND FIRST")        { it.stellarShards > 0 }
-)
-
 @Composable
 fun TreeTab(state: GameState) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 32.dp, vertical = 16.dp),
+            .padding(horizontal = 16.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        treeEntries.forEachIndexed { index, entry ->
-            val unlocked = entry.isUnlocked(state)
-            TreeNodeItem(entry = entry, unlocked = unlocked)
-            if (index < treeEntries.lastIndex) {
-                val nextUnlocked = treeEntries[index + 1].isUnlocked(state)
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .height(20.dp)
-                        .background(AsteroidsGreen.copy(alpha = if (unlocked && nextUnlocked) 0.5f else 0.12f))
-                )
+        // ── BOOT ──────────────────────────────────────────────────────────────
+        TNode("PICKAXE", "Manual strike mining", "ACTIVE", true)
+        TVLine(true)
+        TNode("DRILL HEAD LV.1", "1 iron/sec", "BUY IN SHOP", state.drillHeadLevel >= 1)
+        TVLine(state.drillHeadLevel >= 1)
+        TNode("DRILL HEAD LV.2", "3 iron/sec  +  quartz", "NEED DRILL LV.1", state.drillHeadLevel >= 2)
+
+        // ── ENERGY BRANCH (build either or both) ──────────────────────────────
+        TSectionHeader("ENERGY GRID  —  build any combination")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            TBranchNode("POWER CORE", "3 energy/sec\nupkeep: 1 quartz/sec", "NEED DRILL LV.2", state.powerCoreLevel >= 1, Modifier.weight(1f))
+            Text("AND\n/OR", color = AsteroidsGreen.copy(alpha = 0.3f), fontFamily = AsteroidsFont, fontSize = 8.sp,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.align(Alignment.CenterVertically))
+            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                TBranchNode("SOLAR ARRAY LV.1", "1 energy/sec\nno upkeep", "NEED POWER CORE", state.solarArrayLevel >= 1, Modifier.fillMaxWidth())
+                TVLine(state.solarArrayLevel >= 1)
+                TBranchNode("SOLAR ARRAY LV.2", "2 energy/sec\nno upkeep", "NEED SOLAR LV.1", state.solarArrayLevel >= 2, Modifier.fillMaxWidth())
             }
         }
+
+        TVLine(state.drillHeadLevel >= 2)
+        TNode("DRILL HEAD LV.3", "9 iron/sec", "NEED DRILL LV.2 + 80 energy", state.drillHeadLevel >= 3)
+        TVLine(state.drillHeadLevel >= 3)
+        TNode("DEEP SHAFT", "0.5 titanium/sec", "NEED DRILL LV.3", state.deepShaftLevel >= 1)
+
+        // ── OPTIONAL SIDEGRADE ────────────────────────────────────────────────
+        Spacer(Modifier.height(6.dp))
+        TOptional("REFINERY", "Convert resources downward", "NEED DRILL LV.3", state.hasRefinery)
+        Spacer(Modifier.height(6.dp))
+
+        // ── LAUNCH SILO — choose one path ─────────────────────────────────────
+        TSectionHeader("LAUNCH SILO  —  choose one path")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                TBranchNode("PATH A", "28K iron\n+ 500 titanium\nfaster, needs deep shaft", "NEED DEEP SHAFT", state.hasLaunchSilo, Modifier.fillMaxWidth())
+            }
+            Text("OR", color = AsteroidsGreen.copy(alpha = 0.3f), fontFamily = AsteroidsFont, fontSize = 8.sp,
+                modifier = Modifier.align(Alignment.CenterVertically))
+            Column(modifier = Modifier.weight(1f)) {
+                TBranchNode("PATH B", "15K iron\n+ 2K quartz\nno titanium needed", "NEED DRILL LV.3", state.hasLaunchSilo, Modifier.fillMaxWidth())
+            }
+        }
+
+        TVLine(state.hasLaunchSilo)
+        TNode("RELAY SATELLITE", "Orbital communications", "NEED LAUNCH SILO", state.hasRelaySatellite)
+        TVLine(state.hasRelaySatellite)
+        TNode("ORBITAL LAB", "Advanced research", "NEED RELAY + 2K iridium", state.hasOrbitalLab)
+
+        // ── ORBITAL BRANCH (build either or both) ─────────────────────────────
+        TSectionHeader("ORBITAL  —  build either or both")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            TBranchNode("ASTEROID MINER", "0.05 xenon/sec\nproduces xenon for core path", "NEED ORBITAL LAB", state.hasAsteroidMiner, Modifier.weight(1f))
+            Text("AND\n/OR", color = AsteroidsGreen.copy(alpha = 0.3f), fontFamily = AsteroidsFont, fontSize = 8.sp,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.align(Alignment.CenterVertically))
+            TBranchNode("ORBITAL SOLAR", "20 energy/sec\nno upkeep\nneeds Solar LV.2", "NEED LAB\n+ SOLAR LV.2", state.hasOrbitalSolarStation, Modifier.weight(1f))
+        }
+
+        // ── CORE PATH ─────────────────────────────────────────────────────────
+        TSectionHeader("CORE PATH  —  requires Drill LV.4 + xenon")
+        TNode("DRILL HEAD LV.4", "27 iron/sec", "NEED DRILL LV.3 + 1K titan", state.drillHeadLevel >= 4)
+        TVLine(state.drillHeadLevel >= 4)
+        TNode("DEEP SHAFT LV.2", "0.15 iridium/sec", "NEED DRILL LV.4", state.deepShaftLevel >= 2)
+        TVLine(state.hasAsteroidMiner)
+        TNode("CORE TAP", "500 xenon to build", "NEED DRILL LV.4 + xenon", state.hasCoreTap)
+        TVLine(state.hasCoreTap)
+        TNode("PLANET CORE", "2K xenon to build", "NEED CORE TAP", state.hasPlanetCore)
+        TVLine(state.hasPlanetCore)
+        TNode("ASCEND", "Reset  →  +1 Stellar Shard", "NEED PLANET CORE", state.stellarShards > 0)
+        TVLine(state.stellarShards > 0)
+        TNode("STELLAR SHARDS", "Permanent prestige currency", "ASCEND FIRST", state.stellarShards > 0)
     }
 }
 
 @Composable
-private fun TreeNodeItem(entry: TreeEntry, unlocked: Boolean) {
+private fun TNode(label: String, detail: String, hint: String, unlocked: Boolean) {
     val color = if (unlocked) AsteroidsGreen else AsteroidsGreen.copy(alpha = 0.22f)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .border(width = 1.dp, color = color, shape = RoundedCornerShape(2.dp))
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+            .border(1.dp, color, RoundedCornerShape(2.dp))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(entry.label, color = color, fontFamily = AsteroidsFont, fontWeight = FontWeight.Bold, fontSize = 12.sp, letterSpacing = 1.sp)
-            Text(entry.detail, color = color.copy(alpha = 0.6f), fontFamily = AsteroidsFont, fontSize = 10.sp)
+            Text(label, color = color, fontFamily = AsteroidsFont, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.sp)
+            Text(detail, color = color.copy(alpha = 0.6f), fontFamily = AsteroidsFont, fontSize = 9.sp)
         }
+        Text(if (unlocked) "ACTIVE" else hint, color = color.copy(alpha = 0.75f), fontFamily = AsteroidsFont, fontSize = 8.sp,
+            textAlign = androidx.compose.ui.text.style.TextAlign.End)
+    }
+}
+
+@Composable
+private fun TBranchNode(label: String, detail: String, hint: String, unlocked: Boolean, modifier: Modifier = Modifier) {
+    val color = if (unlocked) AsteroidsGreen else AsteroidsGreen.copy(alpha = 0.22f)
+    Column(
+        modifier = modifier
+            .border(1.dp, color, RoundedCornerShape(2.dp))
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(label, color = color, fontFamily = AsteroidsFont, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+        Text(detail, color = color.copy(alpha = 0.6f), fontFamily = AsteroidsFont, fontSize = 8.sp, lineHeight = 12.sp)
+        Text(if (unlocked) "ACTIVE" else hint, color = color.copy(alpha = 0.7f), fontFamily = AsteroidsFont, fontSize = 7.sp, lineHeight = 10.sp)
+    }
+}
+
+@Composable
+private fun TOptional(label: String, detail: String, hint: String, unlocked: Boolean) {
+    val color = if (unlocked) AsteroidsGreen.copy(alpha = 0.75f) else AsteroidsGreen.copy(alpha = 0.18f)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth(0.82f)
+            .border(1.dp, color, RoundedCornerShape(2.dp))
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("OPTIONAL", color = color.copy(alpha = 0.55f), fontFamily = AsteroidsFont, fontSize = 7.sp, letterSpacing = 1.sp)
+                Text(label, color = color, fontFamily = AsteroidsFont, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+            }
+            Text(detail, color = color.copy(alpha = 0.6f), fontFamily = AsteroidsFont, fontSize = 9.sp)
+        }
+        Text(if (unlocked) "ACTIVE" else hint, color = color.copy(alpha = 0.7f), fontFamily = AsteroidsFont, fontSize = 8.sp)
+    }
+}
+
+@Composable
+private fun TVLine(lit: Boolean) {
+    Box(
+        modifier = Modifier
+            .width(1.dp)
+            .height(20.dp)
+            .background(AsteroidsGreen.copy(alpha = if (lit) 0.5f else 0.12f))
+    )
+}
+
+@Composable
+private fun TSectionHeader(text: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(Modifier.weight(1f).height(1.dp).background(AsteroidsGreen.copy(alpha = 0.18f)))
         Text(
-            text = if (unlocked) "ACTIVE" else entry.lockedHint,
-            color = color.copy(alpha = 0.75f),
+            text = "  $text  ",
+            color = AsteroidsGreen.copy(alpha = 0.45f),
             fontFamily = AsteroidsFont,
-            fontSize = 9.sp,
-            letterSpacing = 0.5.sp
+            fontSize = 8.sp,
+            letterSpacing = 1.sp
         )
+        Box(Modifier.weight(1f).height(1.dp).background(AsteroidsGreen.copy(alpha = 0.18f)))
     }
 }

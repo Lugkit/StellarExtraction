@@ -50,7 +50,7 @@ data class GameState(
         1 -> 1.0; 2 -> 3.0; 3 -> 9.0; 4 -> 27.0; else -> 0.0
     }
     // Quartz: drill produces 0.5/s, Power Core consumes 1/s upkeep
-    val quartzBasePerSec: Double  get() = if (drillHeadLevel >= 2) 0.5 else 0.0
+    val quartzBasePerSec: Double  get() = if (drillHeadLevel >= 2) 1.5 else 0.0
     val quartzUpkeep: Double      get() = if (powerCoreLevel >= 1) 1.0 else 0.0
     val quartzPerSec: Double      get() = quartzBasePerSec - quartzUpkeep
 
@@ -252,7 +252,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun buySolarArray() {
         val s = _state.value
         val next = s.solarArrayLevel + 1
-        if (next > 2 || s.drillHeadLevel < 2) return
+        if (next > 2 || s.powerCoreLevel < 1) return
         val cost = solarArrayCosts[next] ?: return
         if (!s.canAfford(cost)) return
         _state.value = s.spend(cost).copy(solarArrayLevel = next)
