@@ -129,8 +129,13 @@ fun ShopTab(
         }
 
         // ── ORBITAL ───────────────────────────────────────────────────────────
+        val anyOrbital = (!state.hasLaunchSilo && state.drillHeadLevel >= 3) ||
+            (!state.hasRelaySatellite && state.hasLaunchSilo) ||
+            (!state.hasOrbitalLab && state.hasRelaySatellite) ||
+            (!state.hasAsteroidMiner && state.hasOrbitalLab)
+        if (anyOrbital) SectionLabel("ORBITAL")
+
         if (!state.hasLaunchSilo && state.drillHeadLevel >= 3) {
-            SectionLabel("ORBITAL")
             if (state.deepShaftLevel >= 1) {
                 UpgradeCard(
                     name        = "LAUNCH SILO",
@@ -152,7 +157,6 @@ fun ShopTab(
         }
 
         if (!state.hasRelaySatellite && state.hasLaunchSilo) {
-            SectionLabel("ORBITAL")
             UpgradeCard(
                 name        = "RELAY SATELLITE",
                 description = "Orbital communications",
@@ -164,7 +168,6 @@ fun ShopTab(
         }
 
         if (!state.hasOrbitalLab && state.hasRelaySatellite) {
-            SectionLabel("ORBITAL")
             UpgradeCard(
                 name        = "ORBITAL LAB",
                 description = "Advanced research platform",
@@ -176,7 +179,6 @@ fun ShopTab(
         }
 
         if (!state.hasAsteroidMiner && state.hasOrbitalLab) {
-            SectionLabel("ORBITAL")
             UpgradeCard(
                 name        = "ASTEROID MINER",
                 description = "0.05 xenon/sec",
@@ -428,8 +430,8 @@ fun TreeTab(state: GameState) {
         TVLine(state.hasCoreTap)
         TNode("PLANET CORE", "2K xenon to build", "NEED CORE TAP", state.hasPlanetCore)
         TVLine(state.hasPlanetCore)
-        TNode("ASCEND", "Reset  →  +1 Stellar Shard", "NEED PLANET CORE", state.stellarShards > 0)
-        TVLine(state.stellarShards > 0)
+        TNode("ASCEND", "Reset  →  +1 Stellar Shard", "NEED PLANET CORE", state.hasPlanetCore)
+        TVLine(state.hasPlanetCore)
         TNode("STELLAR SHARDS", "Permanent prestige currency", "ASCEND FIRST", state.stellarShards > 0)
     }
 }
