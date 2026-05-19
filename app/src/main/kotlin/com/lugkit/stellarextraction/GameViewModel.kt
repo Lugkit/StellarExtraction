@@ -13,6 +13,8 @@ import org.json.JSONObject
 import kotlin.math.max
 import kotlin.math.min
 
+enum class Resource { IRON, QUARTZ, ENERGY, TITANIUM, IRIDIUM, XENON }
+
 data class BuildCost(
     val iron: Double = 0.0,
     val quartz: Double = 0.0,
@@ -46,9 +48,9 @@ data class GameState(
     }
     val quartzPerSec: Double   get() = if (drillHeadLevel >= 2) 0.5 else 0.0
     val energyPerSec: Double   get() = if (powerCoreLevel >= 1) 1.0 else 0.0
-    val titaniumPerSec: Double get() = if (deepShaftLevel >= 1) 0.2 else 0.0
-    val iridiumPerSec: Double  get() = if (deepShaftLevel >= 2) 0.05 else 0.0
-    val xenonPerSec: Double    get() = if (hasAsteroidMiner) 0.02 else 0.0
+    val titaniumPerSec: Double get() = if (deepShaftLevel >= 1) 0.5  else 0.0
+    val iridiumPerSec: Double  get() = if (deepShaftLevel >= 2) 0.15 else 0.0
+    val xenonPerSec: Double    get() = if (hasAsteroidMiner)    0.05 else 0.0
 
     val quartzVisible: Boolean        get() = drillHeadLevel >= 2
     val energyVisible: Boolean        get() = powerCoreLevel >= 1
@@ -81,22 +83,22 @@ data class GameState(
 }
 
 val drillHeadCosts = mapOf(
-    1 to BuildCost(iron = 10.0),
-    2 to BuildCost(iron = 400.0),
-    3 to BuildCost(iron = 5_000.0,  energy = 80.0),
-    4 to BuildCost(iron = 28_000.0, titanium = 1_000.0)
+    1 to BuildCost(iron =  10.0),
+    2 to BuildCost(iron =   4_000.0),
+    3 to BuildCost(iron =  15_000.0, energy   =   200.0),
+    4 to BuildCost(iron =  80_000.0, titanium = 2_000.0)
 )
 val deepShaftCosts = mapOf(
-    1 to BuildCost(iron = 8_000.0),
-    2 to BuildCost(iron = 40_000.0, titanium = 1_000.0)
+    1 to BuildCost(iron =  40_000.0),
+    2 to BuildCost(iron = 100_000.0, titanium = 2_000.0)
 )
-val powerCoreCost      = BuildCost(iron = 1_500.0,  quartz = 200.0)
-val launchSiloCost     = BuildCost(iron = 28_000.0, titanium = 500.0)
-val relaySatelliteCost = BuildCost(iron = 80_000.0, titanium = 2_000.0)
-val orbitalLabCost     = BuildCost(iridium = 2_000.0)
-val asteroidMinerCost  = BuildCost(iridium = 10_000.0)
-val coreTapCost        = BuildCost(xenon = 500.0)
-val planetCoreCost     = BuildCost(xenon = 2_000.0)
+val powerCoreCost      = BuildCost(iron =   3_000.0, quartz   =    600.0)
+val launchSiloCost     = BuildCost(iron =  60_000.0, titanium =  1_500.0)
+val relaySatelliteCost = BuildCost(iron = 200_000.0, titanium =  3_000.0)
+val orbitalLabCost     = BuildCost(iron = 500_000.0, iridium  =  2_000.0)
+val asteroidMinerCost  = BuildCost(iron = 500_000.0, iridium  =  3_000.0)
+val coreTapCost        = BuildCost(xenon =   200.0)
+val planetCoreCost     = BuildCost(xenon = 1_000.0)
 
 class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val prefs = application.getSharedPreferences("stellar_game", Context.MODE_PRIVATE)
@@ -170,16 +172,31 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         } catch (_: Exception) {}
     }
 
+    // Spread mining: 0.5s of all resources
     fun strike() {
         _state.value = _state.value.let { s ->
             s.copy(
-                iron     = s.iron     + max(1.0, s.ironPerSec),
-                quartz   = s.quartz   + s.quartzPerSec,
-                energy   = s.energy   + s.energyPerSec,
-                titanium = s.titanium + s.titaniumPerSec,
-                iridium  = s.iridium  + s.iridiumPerSec,
-                xenon    = s.xenon    + s.xenonPerSec
+                iron     = s.iron     + max(1.0, s.ironPerSec)   * 0.5,
+                quartz   = s.quartz   + s.quartzPerSec           * 0.5,
+                energy   = s.energy   + s.energyPerSec           * 0.5,
+                titanium = s.titanium + s.titaniumPerSec         * 0.5,
+                iridium  = s.iridium  + s.iridiumPerSec          * 0.5,
+                xenon    = s.xenon    + s.xenonPerSec            * 0.5
             )
+        }
+    }
+
+    // Focused mining: 1.5s of one resource
+    fun focusedStrike(resource: Resource) {
+        _state.value = _state.value.let { s ->
+            when (resource) {
+                Resource.IRON     -> s.copy(iron     = s.iron     + max(1.0, s.ironPerSec)   * 1.5)
+                Resource.QUARTZ   -> s.copy(quartz   = s.quartz   + s.quartzPerSec           * 1.5)
+                Resource.ENERGY   -> s.copy(energy   = s.energy   + s.energyPerSec           * 1.5)
+                Resource.TITANIUM -> s.copy(titanium = s.titanium + s.titaniumPerSec         * 1.5)
+                Resource.IRIDIUM  -> s.copy(iridium  = s.iridium  + s.iridiumPerSec          * 1.5)
+                Resource.XENON    -> s.copy(xenon    = s.xenon    + s.xenonPerSec            * 1.5)
+            }
         }
     }
 
@@ -254,5 +271,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (!s.hasPlanetCore) return
         _state.value = GameState(stellarShards = s.stellarShards + 1)
         saveState()
+    }
+
+    fun hardReset() {
+        _state.value = GameState()
+        prefs.edit().remove("game_state").apply()
     }
 }

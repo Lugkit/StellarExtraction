@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lugkit.stellarextraction.GameViewModel
+import com.lugkit.stellarextraction.Resource
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.pow
@@ -66,7 +67,9 @@ fun GameScreen(vm: GameViewModel) {
 @Composable
 private fun MainView(vm: GameViewModel, onShop: () -> Unit, onTree: () -> Unit) {
     val state by vm.state.collectAsState()
+    var showResetDialog by remember { mutableStateOf(false) }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -75,11 +78,13 @@ private fun MainView(vm: GameViewModel, onShop: () -> Unit, onTree: () -> Unit) 
             .navigationBarsPadding()
     ) {
         // Title bar
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color(0xFF050505))
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "STELLAR EXTRACTION",
@@ -88,6 +93,14 @@ private fun MainView(vm: GameViewModel, onShop: () -> Unit, onTree: () -> Unit) 
                 fontWeight = FontWeight.Bold,
                 fontSize = 11.sp,
                 letterSpacing = 3.sp
+            )
+            Text(
+                text = "RESET",
+                color = AsteroidsGreen.copy(alpha = 0.45f),
+                fontFamily = AsteroidsFont,
+                fontSize = 10.sp,
+                letterSpacing = 2.sp,
+                modifier = Modifier.clickable { showResetDialog = true }
             )
         }
         HRule()
@@ -108,17 +121,17 @@ private fun MainView(vm: GameViewModel, onShop: () -> Unit, onTree: () -> Unit) 
                     .padding(start = 12.dp, top = 14.dp, bottom = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                ResourceItem("IRON",   state.iron,   state.ironPerSec)
+                ResourceItem("IRON",   state.iron,   state.ironPerSec)     { vm.focusedStrike(Resource.IRON) }
                 if (state.quartzVisible)
-                    ResourceItem("QUARTZ", state.quartz, state.quartzPerSec)
+                    ResourceItem("QUARTZ", state.quartz, state.quartzPerSec)   { vm.focusedStrike(Resource.QUARTZ) }
                 if (state.energyVisible)
-                    ResourceItem("ENERGY", state.energy, state.energyPerSec)
+                    ResourceItem("ENERGY", state.energy, state.energyPerSec)   { vm.focusedStrike(Resource.ENERGY) }
                 if (state.titaniumVisible)
-                    ResourceItem("TITAN",  state.titanium, state.titaniumPerSec)
+                    ResourceItem("TITAN",  state.titanium, state.titaniumPerSec) { vm.focusedStrike(Resource.TITANIUM) }
                 if (state.iridiumVisible)
-                    ResourceItem("IRIDIUM", state.iridium, state.iridiumPerSec)
+                    ResourceItem("IRIDIUM", state.iridium, state.iridiumPerSec) { vm.focusedStrike(Resource.IRIDIUM) }
                 if (state.xenonVisible)
-                    ResourceItem("XENON",  state.xenon, state.xenonPerSec)
+                    ResourceItem("XENON",  state.xenon, state.xenonPerSec)     { vm.focusedStrike(Resource.XENON) }
                 if (state.stellarShardsVisible)
                     ResourceItem("SHARDS", state.stellarShards.toDouble(), 0.0)
             }
@@ -157,7 +170,15 @@ private fun MainView(vm: GameViewModel, onShop: () -> Unit, onTree: () -> Unit) 
             NavLink("SHOP", onClick = onShop)
             NavLink("TREE", onClick = onTree)
         }
+    } // end inner Column
+
+    if (showResetDialog) {
+        ResetDialog(
+            onConfirm = { vm.hardReset(); showResetDialog = false },
+            onDismiss = { showResetDialog = false }
+        )
     }
+    } // end Box
 }
 
 @Composable
@@ -176,11 +197,25 @@ fun NavLink(label: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun ResourceItem(label: String, amount: Double, rate: Double) {
-    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+fun ResourceItem(label: String, amount: Double, rate: Double, onTap: (() -> Unit)? = null) {
+    var tapped by remember { mutableStateOf(false) }
+    val labelAlpha by animateFloatAsState(
+        targetValue = if (tapped) 1f else 0.45f,
+        animationSpec = tween(durationMillis = if (tapped) 50 else 400),
+        finishedListener = { if (tapped) tapped = false },
+        label = "resourceFlash"
+    )
+
+    Column(
+        modifier = if (onTap != null) Modifier.clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null
+        ) { tapped = true; onTap() } else Modifier,
+        verticalArrangement = Arrangement.spacedBy(1.dp)
+    ) {
         Text(
             text = label,
-            color = AsteroidsGreen.copy(alpha = 0.45f),
+            color = AsteroidsGreen.copy(alpha = labelAlpha),
             fontFamily = AsteroidsFont,
             fontSize = 11.sp,
             letterSpacing = 1.sp
@@ -199,6 +234,57 @@ fun ResourceItem(label: String, amount: Double, rate: Double) {
                 fontFamily = AsteroidsFont,
                 fontSize = 8.sp
             )
+        }
+    }
+}
+
+@Composable
+private fun ResetDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.88f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onDismiss
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(0.78f)
+                .border(width = 1.dp, color = AsteroidsGreen.copy(alpha = 0.6f), shape = androidx.compose.foundation.shape.RoundedCornerShape(2.dp))
+                .background(Color.Black)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {}
+                )
+                .padding(28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(
+                text = "RESET",
+                color = AsteroidsGreen,
+                fontFamily = AsteroidsFont,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                letterSpacing = 4.sp
+            )
+            Text(
+                text = "All progress will be lost.\nThis cannot be undone.",
+                color = AsteroidsGreen.copy(alpha = 0.55f),
+                fontFamily = AsteroidsFont,
+                fontSize = 11.sp,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                lineHeight = 18.sp
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                NavLink(label = "CONFIRM", onClick = onConfirm)
+                NavLink(label = "CANCEL",  onClick = onDismiss)
+            }
         }
     }
 }
