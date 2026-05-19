@@ -550,13 +550,13 @@ private fun FlybyOverlay() {
     var isAnimating  by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
+        delay((3_000L..90_000L).random())   // first appearance: 3–90 s
         while (true) {
-            // 90–150 s between appearances
-            delay((90_000L..150_000L).random())
             isAnimating = true
             animProgress.snapTo(0f)
             animProgress.animateTo(1f, animationSpec = tween(4200, easing = LinearEasing))
             isAnimating = false
+            delay((90_000L..150_000L).random())  // subsequent: 90–150 s
         }
     }
 
