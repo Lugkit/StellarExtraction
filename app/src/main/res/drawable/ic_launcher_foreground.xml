@@ -24,7 +24,7 @@
     <!-- Planet outer circle -->
     <path
         android:strokeColor="#00FF41"
-        android:strokeWidth="2.5"
+        android:strokeWidth="3.2"
         android:fillColor="#00000000"
         android:pathData="M24,54 A30,30 0 1,0 84,54 A30,30 0 1,0 24,54 Z"/>
 
@@ -32,24 +32,24 @@
     <!-- Equatorial (t=0) -->
     <path
         android:strokeColor="#00FF41"
-        android:strokeWidth="1.5"
-        android:strokeAlpha="0.38"
+        android:strokeWidth="2.0"
+        android:strokeAlpha="0.60"
         android:fillColor="#00000000"
         android:pathData="M24,54 A30,8.4 0 1,0 84,54 A30,8.4 0 1,0 24,54 Z"/>
 
     <!-- Upper (t=-0.5, y=39) -->
     <path
         android:strokeColor="#00FF41"
-        android:strokeWidth="1.5"
-        android:strokeAlpha="0.38"
+        android:strokeWidth="2.0"
+        android:strokeAlpha="0.60"
         android:fillColor="#00000000"
         android:pathData="M28,39 A26,7.3 0 1,0 80,39 A26,7.3 0 1,0 28,39 Z"/>
 
     <!-- Lower (t=+0.5, y=69) -->
     <path
         android:strokeColor="#00FF41"
-        android:strokeWidth="1.5"
-        android:strokeAlpha="0.38"
+        android:strokeWidth="2.0"
+        android:strokeAlpha="0.60"
         android:fillColor="#00000000"
         android:pathData="M28,69 A26,7.3 0 1,0 80,69 A26,7.3 0 1,0 28,69 Z"/>
 
@@ -57,8 +57,8 @@
     <!-- Centre meridian (0°) -->
     <path
         android:strokeColor="#00FF41"
-        android:strokeWidth="1.5"
-        android:strokeAlpha="0.38"
+        android:strokeWidth="2.0"
+        android:strokeAlpha="0.60"
         android:fillColor="#00000000"
         android:pathData="M48.6,54 A5.4,30 0 1,0 59.4,54 A5.4,30 0 1,0 48.6,54 Z"/>
 
@@ -69,8 +69,8 @@
         android:pivotY="54">
         <path
             android:strokeColor="#00FF41"
-            android:strokeWidth="1.5"
-            android:strokeAlpha="0.38"
+            android:strokeWidth="2.0"
+            android:strokeAlpha="0.50"
             android:fillColor="#00000000"
             android:pathData="M48.6,54 A5.4,30 0 1,0 59.4,54 A5.4,30 0 1,0 48.6,54 Z"/>
     </group>
@@ -82,8 +82,8 @@
         android:pivotY="54">
         <path
             android:strokeColor="#00FF41"
-            android:strokeWidth="1.5"
-            android:strokeAlpha="0.38"
+            android:strokeWidth="2.0"
+            android:strokeAlpha="0.50"
             android:fillColor="#00000000"
             android:pathData="M48.6,54 A5.4,30 0 1,0 59.4,54 A5.4,30 0 1,0 48.6,54 Z"/>
     </group>

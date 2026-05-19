@@ -592,15 +592,15 @@ private fun DrawScope.flybyScene(p: Float, type: Int, yFrac: Float, rtl: Boolean
         0 -> {
             // UFO alone
             val ufoP = ((p * 1.1f) - 0.05f)
-            drawFlybyUFO(Offset(xOf(ufoP, 32f), mainY), 13f, col, sw)
+            drawFlybyUFO(Offset(xOf(ufoP, 40f), mainY), 20f, col, sw)
         }
         else -> {
             // Ship chasing asteroid — asteroid slightly ahead, ship behind
             val astP  = (p * 1.08f) - 0.04f
             val shipP = (p * 1.08f) - 0.11f
             val shipAngle = if (rtl) -90f else 90f
-            drawFlybyAsteroid(Offset(xOf(astP,  44f), mainY - 6f), 16f, p * 480f, col, sw)
-            drawFlybyShip(    Offset(xOf(shipP, 44f), mainY + 8f), 13f, shipAngle, col, sw)
+            drawFlybyAsteroid(Offset(xOf(astP,  44f), mainY - 8f), 24f, p * 480f, col, sw)
+            drawFlybyShip(    Offset(xOf(shipP, 44f), mainY + 12f), 20f, shipAngle, col, sw)
         }
     }
 }
