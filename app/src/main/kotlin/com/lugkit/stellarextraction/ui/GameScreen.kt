@@ -546,46 +546,63 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawBuildings(
 
 @Composable
 private fun FlybyOverlay() {
-    val animProgress = remember { Animatable(0f) }
-    var isAnimating  by remember { mutableStateOf(false) }
+    val animProgress  = remember { Animatable(0f) }
+    var isAnimating   by remember { mutableStateOf(false) }
+    var flybyType     by remember { mutableIntStateOf(0) }   // 0 = UFO, 1 = ship+asteroid
+    var flybyYFrac    by remember { mutableStateOf(0.40f) }  // fraction of screen height
+    var flybyRtL      by remember { mutableStateOf(false) }  // right-to-left?
 
     LaunchedEffect(Unit) {
-        delay((3_000L..90_000L).random())   // first appearance: 3–90 s
+        delay((3_000L..90_000L).random())
         while (true) {
+            flybyType  = (0..1).random()
+            flybyYFrac = kotlin.random.Random.nextFloat() * (0.52f - 0.28f) + 0.28f
+            flybyRtL   = kotlin.random.Random.nextBoolean()
+
             isAnimating = true
             animProgress.snapTo(0f)
             animProgress.animateTo(1f, animationSpec = tween(4200, easing = LinearEasing))
             isAnimating = false
-            delay((90_000L..150_000L).random())  // subsequent: 90–150 s
+            delay((90_000L..150_000L).random())
         }
     }
 
     if (isAnimating) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            flybyScene(animProgress.value)
+            flybyScene(animProgress.value, flybyType, flybyYFrac, flybyRtL)
         }
     }
 }
 
-private fun DrawScope.flybyScene(p: Float) {
-    val col = AsteroidsGreen.copy(alpha = 0.45f)
-    val sw  = 1.5f
-    val w   = size.width
-    val h   = size.height
+private fun DrawScope.flybyScene(p: Float, type: Int, yFrac: Float, rtl: Boolean) {
+    val col  = AsteroidsGreen.copy(alpha = 0.45f)
+    val sw   = 1.5f
+    val w    = size.width
+    val h    = size.height
+    val mainY = h * yFrac
 
-    // Asteroid + ship: left → right across middle of planet area
-    val mainY = h * 0.40f
-    val astP  = ((p * 1.08f) - 0.04f).coerceIn(0f, 1f)
-    val shipP = ((p * 1.08f) - 0.10f).coerceIn(0f, 1f)
-    val astX  = flyLerp(-44f, w + 44f, astP)
-    val shipX = flyLerp(-100f, w + 16f, shipP)
-    drawFlybyAsteroid(Offset(astX,  mainY - 6f), 16f, p * 480f, col, sw)
-    drawFlybyShip(    Offset(shipX, mainY + 8f), 13f, 90f,       col, sw)
+    // x position helper: same progress offsets work for both directions
+    fun xOf(prog: Float, edge: Float): Float {
+        val clamped = prog.coerceIn(0f, 1f)
+        return if (rtl) flyLerp(w + edge, -edge, clamped)
+               else     flyLerp(-edge, w + edge, clamped)
+    }
 
-    // UFO: right → left, slightly higher and faster
-    val ufoP = ((p * 1.25f) - 0.12f).coerceIn(0f, 1f)
-    val ufoX = flyLerp(w + 32f, -32f, ufoP)
-    drawFlybyUFO(Offset(ufoX, mainY - 40f), 13f, col, sw)
+    when (type) {
+        0 -> {
+            // UFO alone
+            val ufoP = ((p * 1.1f) - 0.05f)
+            drawFlybyUFO(Offset(xOf(ufoP, 32f), mainY), 13f, col, sw)
+        }
+        else -> {
+            // Ship chasing asteroid — asteroid slightly ahead, ship behind
+            val astP  = (p * 1.08f) - 0.04f
+            val shipP = (p * 1.08f) - 0.11f
+            val shipAngle = if (rtl) -90f else 90f
+            drawFlybyAsteroid(Offset(xOf(astP,  44f), mainY - 6f), 16f, p * 480f, col, sw)
+            drawFlybyShip(    Offset(xOf(shipP, 44f), mainY + 8f), 13f, shipAngle, col, sw)
+        }
+    }
 }
 
 private fun flyLerp(a: Float, b: Float, t: Float) = a + (b - a) * t
