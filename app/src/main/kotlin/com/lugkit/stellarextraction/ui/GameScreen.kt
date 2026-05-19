@@ -6,12 +6,12 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,7 +20,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,14 +29,16 @@ import kotlin.math.max
 import kotlin.math.pow
 import kotlin.math.sqrt
 
+private enum class Screen { MAIN, SHOP, TREE }
+
 @Composable
 fun GameScreen(vm: GameViewModel) {
     val state by vm.state.collectAsState()
-    var showMenu by remember { mutableStateOf(false) }
+    var screen by remember { mutableStateOf(Screen.MAIN) }
 
-    if (showMenu) {
-        MenuScreen(
-            state = state,
+    when (screen) {
+        Screen.SHOP -> ShopScreen(
+            state               = state,
             onBuyDrillHead      = vm::buyDrillHead,
             onBuyPowerCore      = vm::buyPowerCore,
             onBuyDeepShaft      = vm::buyDeepShaft,
@@ -48,38 +49,168 @@ fun GameScreen(vm: GameViewModel) {
             onBuyCoreTap        = vm::buyCoreTap,
             onBuyPlanetCore     = vm::buyPlanetCore,
             onAscend            = vm::ascend,
-            onClose             = { showMenu = false }
+            onClose             = { screen = Screen.MAIN }
         )
-    } else {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .statusBarsPadding()
-                .navigationBarsPadding()
-        ) {
-            TopMenu(state = state, onMenuClick = { showMenu = true })
+        Screen.TREE -> TreeScreen(
+            state   = state,
+            onClose = { screen = Screen.MAIN }
+        )
+        Screen.MAIN -> MainView(
+            vm        = vm,
+            onShop    = { screen = Screen.SHOP },
+            onTree    = { screen = Screen.TREE }
+        )
+    }
+}
 
+@Composable
+private fun MainView(vm: GameViewModel, onShop: () -> Unit, onTree: () -> Unit) {
+    val state by vm.state.collectAsState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+    ) {
+        // Title bar
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF050505))
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Text(
+                text = "STELLAR EXTRACTION",
+                color = AsteroidsGreen,
+                fontFamily = AsteroidsFont,
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+                letterSpacing = 3.sp
+            )
+        }
+        HRule()
+
+        // Resources | Planet
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            verticalAlignment = Alignment.Top
+        ) {
+            // Left: resources
+            Column(
+                modifier = Modifier
+                    .width(100.dp)
+                    .fillMaxHeight()
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 12.dp, top = 14.dp, bottom = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                ResourceItem("IRON",   state.iron,   state.ironPerSec)
+                if (state.quartzVisible)
+                    ResourceItem("QUARTZ", state.quartz, state.quartzPerSec)
+                if (state.energyVisible)
+                    ResourceItem("ENERGY", state.energy, state.energyPerSec)
+                if (state.titaniumVisible)
+                    ResourceItem("TITAN",  state.titanium, state.titaniumPerSec)
+                if (state.iridiumVisible)
+                    ResourceItem("IRIDIUM", state.iridium, state.iridiumPerSec)
+                if (state.xenonVisible)
+                    ResourceItem("XENON",  state.xenon, state.xenonPerSec)
+                if (state.stellarShardsVisible)
+                    ResourceItem("SHARDS", state.stellarShards.toDouble(), 0.0)
+            }
+
+            // Center: planet
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Planet(onClick = vm::strike)
                     Text(
                         text = "[ STRIKE ]",
                         color = AsteroidsGreen.copy(alpha = 0.4f),
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 11.sp,
+                        fontFamily = AsteroidsFont,
+                        fontSize = 10.sp,
                         letterSpacing = 3.sp
                     )
                 }
             }
         }
+
+        // Bottom nav
+        HRule()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
+        ) {
+            NavLink("SHOP", onClick = onShop)
+            NavLink("TREE", onClick = onTree)
+        }
     }
+}
+
+@Composable
+fun NavLink(label: String, onClick: () -> Unit) {
+    Text(
+        text = label,
+        color = AsteroidsGreen.copy(alpha = 0.7f),
+        fontFamily = AsteroidsFont,
+        fontSize = 12.sp,
+        letterSpacing = 2.sp,
+        modifier = Modifier
+            .border(width = 1.dp, color = AsteroidsGreen.copy(alpha = 0.3f), shape = RoundedCornerShape(2.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 10.dp, vertical = 8.dp)
+    )
+}
+
+@Composable
+fun ResourceItem(label: String, amount: Double, rate: Double) {
+    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+        Text(
+            text = label,
+            color = AsteroidsGreen.copy(alpha = 0.45f),
+            fontFamily = AsteroidsFont,
+            fontSize = 11.sp,
+            letterSpacing = 1.sp
+        )
+        Text(
+            text = formatNumber(amount),
+            color = AsteroidsGreen,
+            fontFamily = AsteroidsFont,
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp
+        )
+        if (rate > 0) {
+            Text(
+                text = "+${formatRate(rate)}/s",
+                color = AsteroidsGreen.copy(alpha = 0.5f),
+                fontFamily = AsteroidsFont,
+                fontSize = 8.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun HRule() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(AsteroidsGreen.copy(alpha = 0.2f))
+    )
 }
 
 @Composable
@@ -94,7 +225,7 @@ fun Planet(onClick: () -> Unit) {
 
     Canvas(
         modifier = Modifier
-            .size(260.dp)
+            .size(200.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -136,92 +267,6 @@ fun Planet(onClick: () -> Unit) {
                     style = Stroke(width = 1.5f)
                 )
             }
-        }
-    }
-}
-
-@Composable
-fun TopMenu(state: com.lugkit.stellarextraction.GameState, onMenuClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "STELLAR EXTRACTION",
-                color = AsteroidsGreen,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
-                fontSize = 11.sp,
-                letterSpacing = 3.sp
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                ResourceChip(label = "IRON",     amount = state.iron,     rate = state.ironPerSec)
-                if (state.quartzVisible)
-                    ResourceChip(label = "QUARTZ",   amount = state.quartz,   rate = state.quartzPerSec)
-                if (state.energyVisible)
-                    ResourceChip(label = "ENERGY",   amount = state.energy,   rate = state.energyPerSec)
-                if (state.titaniumVisible)
-                    ResourceChip(label = "TITAN",    amount = state.titanium, rate = state.titaniumPerSec)
-                if (state.iridiumVisible)
-                    ResourceChip(label = "IRIDIUM",  amount = state.iridium,  rate = state.iridiumPerSec)
-                if (state.xenonVisible)
-                    ResourceChip(label = "XENON",    amount = state.xenon,    rate = state.xenonPerSec)
-                if (state.stellarShardsVisible)
-                    ResourceChip(label = "SHARDS",   amount = state.stellarShards.toDouble(), rate = 0.0)
-            }
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = "[ MENU ]",
-            color = AsteroidsGreen.copy(alpha = 0.6f),
-            fontFamily = FontFamily.Monospace,
-            fontSize = 12.sp,
-            letterSpacing = 1.sp,
-            modifier = Modifier.clickable { onMenuClick() }
-        )
-    }
-}
-
-@Composable
-fun ResourceChip(label: String, amount: Double, rate: Double) {
-    Row(
-        modifier = Modifier
-            .border(width = 1.dp, color = AsteroidsGreen.copy(alpha = 0.3f), shape = RoundedCornerShape(2.dp))
-            .padding(horizontal = 10.dp, vertical = 5.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            color = AsteroidsGreen.copy(alpha = 0.5f),
-            fontFamily = FontFamily.Monospace,
-            fontSize = 9.sp,
-            letterSpacing = 1.sp
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(
-            text = formatNumber(amount),
-            color = AsteroidsGreen,
-            fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.Bold,
-            fontSize = 15.sp
-        )
-        if (rate > 0) {
-            Spacer(modifier = Modifier.width(5.dp))
-            Text(
-                text = "+${formatRate(rate)}/s",
-                color = AsteroidsGreen.copy(alpha = 0.55f),
-                fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp
-            )
         }
     }
 }

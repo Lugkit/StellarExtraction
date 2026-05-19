@@ -12,14 +12,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lugkit.stellarextraction.*
 
 @Composable
-fun MenuScreen(
+fun ShopScreen(
     state: GameState,
     onBuyDrillHead: () -> Unit,
     onBuyPowerCore: () -> Unit,
@@ -33,62 +32,80 @@ fun MenuScreen(
     onAscend: () -> Unit,
     onClose: () -> Unit
 ) {
-    var tab by remember { mutableIntStateOf(0) }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(androidx.compose.ui.graphics.Color.Black)
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "MENU",
-                color = AsteroidsGreen,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
-                letterSpacing = 3.sp
-            )
-            Text(
-                text = "[ CLOSE ]",
-                color = AsteroidsGreen.copy(alpha = 0.6f),
-                fontFamily = FontFamily.Monospace,
-                fontSize = 12.sp,
-                modifier = Modifier.clickable { onClose() }
-            )
+        FullScreenHeader(title = "SHOP")
+        Box(modifier = Modifier.weight(1f)) {
+            ShopTab(state, onBuyDrillHead, onBuyPowerCore, onBuyDeepShaft,
+                    onBuyLaunchSilo, onBuyRelaySatellite, onBuyOrbitalLab,
+                    onBuyAsteroidMiner, onBuyCoreTap, onBuyPlanetCore, onAscend)
         }
+        BottomNav(onClose = onClose)
+    }
+}
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(AsteroidsGreen.copy(alpha = 0.2f))
+@Composable
+fun TreeScreen(state: GameState, onClose: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(androidx.compose.ui.graphics.Color.Black)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+    ) {
+        FullScreenHeader(title = "TECH TREE")
+        Box(modifier = Modifier.weight(1f)) {
+            TreeTab(state)
+        }
+        BottomNav(onClose = onClose)
+    }
+}
+
+@Composable
+private fun FullScreenHeader(title: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(androidx.compose.ui.graphics.Color(0xFF050505))
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = title,
+            color = AsteroidsGreen,
+            fontFamily = AsteroidsFont,
+            fontWeight = FontWeight.Bold,
+            fontSize = 11.sp,
+            letterSpacing = 3.sp
         )
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(AsteroidsGreen.copy(alpha = 0.2f))
+    )
+}
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            MenuTabButton(label = "SHOP", selected = tab == 0) { tab = 0 }
-            MenuTabButton(label = "TREE", selected = tab == 1) { tab = 1 }
-        }
-
-        when (tab) {
-            0 -> ShopTab(state, onBuyDrillHead, onBuyPowerCore, onBuyDeepShaft,
-                         onBuyLaunchSilo, onBuyRelaySatellite, onBuyOrbitalLab,
-                         onBuyAsteroidMiner, onBuyCoreTap, onBuyPlanetCore, onAscend)
-            1 -> TreeTab(state)
-        }
+@Composable
+private fun BottomNav(onClose: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(AsteroidsGreen.copy(alpha = 0.2f))
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 14.dp),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        NavLink(label = "BACK", onClick = onClose)
     }
 }
 
@@ -99,7 +116,7 @@ fun MenuTabButton(label: String, selected: Boolean, onClick: () -> Unit) {
     Text(
         text = label,
         color = textColor,
-        fontFamily = FontFamily.Monospace,
+        fontFamily = AsteroidsFont,
         fontSize = 12.sp,
         letterSpacing = 2.sp,
         modifier = Modifier
@@ -139,12 +156,12 @@ fun ShopTab(
             val prod = when (next) { 1 -> "1"; 2 -> "3"; 3 -> "9"; else -> "27" }
             SectionLabel("MINING")
             UpgradeCard(
-                name = "DRILL HEAD",
+                name        = "DRILL HEAD",
                 description = "$prod iron/sec",
-                levelLabel = "LVL ${state.drillHeadLevel} → $next",
-                costText = formatCost(cost),
-                canAfford = state.canAfford(cost),
-                onClick = onBuyDrillHead
+                levelLabel  = "LVL ${state.drillHeadLevel} → $next",
+                cost        = cost,
+                state       = state,
+                onClick     = onBuyDrillHead
             )
         }
 
@@ -152,12 +169,12 @@ fun ShopTab(
         if (state.powerCoreLevel < 1 && state.drillHeadLevel >= 2) {
             SectionLabel("ENERGY")
             UpgradeCard(
-                name = "POWER CORE",
+                name        = "POWER CORE",
                 description = "1 energy/sec",
-                levelLabel = "BUILD",
-                costText = formatCost(powerCoreCost),
-                canAfford = state.canAfford(powerCoreCost),
-                onClick = onBuyPowerCore
+                levelLabel  = "BUILD",
+                cost        = powerCoreCost,
+                state       = state,
+                onClick     = onBuyPowerCore
             )
         }
 
@@ -165,12 +182,12 @@ fun ShopTab(
         if (state.deepShaftLevel < 1 && state.drillHeadLevel >= 3) {
             SectionLabel("DEEP MINING")
             UpgradeCard(
-                name = "DEEP SHAFT",
+                name        = "DEEP SHAFT",
                 description = "0.2 titanium/sec",
-                levelLabel = "BUILD",
-                costText = formatCost(deepShaftCosts[1]!!),
-                canAfford = state.canAfford(deepShaftCosts[1]!!),
-                onClick = onBuyDeepShaft
+                levelLabel  = "BUILD",
+                cost        = deepShaftCosts[1]!!,
+                state       = state,
+                onClick     = onBuyDeepShaft
             )
         }
 
@@ -178,12 +195,12 @@ fun ShopTab(
         if (!state.hasLaunchSilo && state.deepShaftLevel >= 1) {
             SectionLabel("ORBITAL")
             UpgradeCard(
-                name = "LAUNCH SILO",
+                name        = "LAUNCH SILO",
                 description = "Enables orbital launches",
-                levelLabel = "BUILD",
-                costText = formatCost(launchSiloCost),
-                canAfford = state.canAfford(launchSiloCost),
-                onClick = onBuyLaunchSilo
+                levelLabel  = "BUILD",
+                cost        = launchSiloCost,
+                state       = state,
+                onClick     = onBuyLaunchSilo
             )
         }
 
@@ -191,28 +208,25 @@ fun ShopTab(
         if (state.deepShaftLevel < 2 && state.deepShaftLevel >= 1 && state.drillHeadLevel >= 4) {
             SectionLabel("DEEP MINING")
             UpgradeCard(
-                name = "DEEP SHAFT LV.2",
+                name        = "DEEP SHAFT LV.2",
                 description = "0.05 iridium/sec",
-                levelLabel = "UPGRADE",
-                costText = formatCost(deepShaftCosts[2]!!),
-                canAfford = state.canAfford(deepShaftCosts[2]!!),
-                onClick = onBuyDeepShaft
+                levelLabel  = "UPGRADE",
+                cost        = deepShaftCosts[2]!!,
+                state       = state,
+                onClick     = onBuyDeepShaft
             )
         }
-
-        // ── Drill Head lv4 extra check: show when lv3 owned ──────────────────
-        // (already handled above via drillHeadLevel < 4)
 
         // ── Relay Satellite ───────────────────────────────────────────────────
         if (!state.hasRelaySatellite && state.hasLaunchSilo) {
             SectionLabel("ORBITAL")
             UpgradeCard(
-                name = "RELAY SATELLITE",
+                name        = "RELAY SATELLITE",
                 description = "Orbital communications",
-                levelLabel = "LAUNCH",
-                costText = formatCost(relaySatelliteCost),
-                canAfford = state.canAfford(relaySatelliteCost),
-                onClick = onBuyRelaySatellite
+                levelLabel  = "LAUNCH",
+                cost        = relaySatelliteCost,
+                state       = state,
+                onClick     = onBuyRelaySatellite
             )
         }
 
@@ -220,12 +234,12 @@ fun ShopTab(
         if (!state.hasOrbitalLab && state.hasRelaySatellite) {
             SectionLabel("ORBITAL")
             UpgradeCard(
-                name = "ORBITAL LAB",
+                name        = "ORBITAL LAB",
                 description = "Advanced research platform",
-                levelLabel = "BUILD",
-                costText = formatCost(orbitalLabCost),
-                canAfford = state.canAfford(orbitalLabCost),
-                onClick = onBuyOrbitalLab
+                levelLabel  = "BUILD",
+                cost        = orbitalLabCost,
+                state       = state,
+                onClick     = onBuyOrbitalLab
             )
         }
 
@@ -233,12 +247,12 @@ fun ShopTab(
         if (!state.hasAsteroidMiner && state.hasOrbitalLab) {
             SectionLabel("ORBITAL")
             UpgradeCard(
-                name = "ASTEROID MINER",
+                name        = "ASTEROID MINER",
                 description = "0.02 xenon/sec",
-                levelLabel = "DEPLOY",
-                costText = formatCost(asteroidMinerCost),
-                canAfford = state.canAfford(asteroidMinerCost),
-                onClick = onBuyAsteroidMiner
+                levelLabel  = "DEPLOY",
+                cost        = asteroidMinerCost,
+                state       = state,
+                onClick     = onBuyAsteroidMiner
             )
         }
 
@@ -246,12 +260,12 @@ fun ShopTab(
         if (!state.hasCoreTap && state.drillHeadLevel >= 4) {
             SectionLabel("CORE")
             UpgradeCard(
-                name = "CORE TAP",
+                name        = "CORE TAP",
                 description = "Access to planet core",
-                levelLabel = "BUILD",
-                costText = formatCost(coreTapCost),
-                canAfford = state.canAfford(coreTapCost),
-                onClick = onBuyCoreTap
+                levelLabel  = "BUILD",
+                cost        = coreTapCost,
+                state       = state,
+                onClick     = onBuyCoreTap
             )
         }
 
@@ -259,12 +273,12 @@ fun ShopTab(
         if (!state.hasPlanetCore && state.hasCoreTap) {
             SectionLabel("CORE")
             UpgradeCard(
-                name = "PLANET CORE",
+                name        = "PLANET CORE",
                 description = "Breach the planet's core",
-                levelLabel = "BUILD",
-                costText = formatCost(planetCoreCost),
-                canAfford = state.canAfford(planetCoreCost),
-                onClick = onBuyPlanetCore
+                levelLabel  = "BUILD",
+                cost        = planetCoreCost,
+                state       = state,
+                onClick     = onBuyPlanetCore
             )
         }
 
@@ -272,12 +286,12 @@ fun ShopTab(
         if (state.hasPlanetCore) {
             SectionLabel("PRESTIGE")
             UpgradeCard(
-                name = "ASCEND",
+                name        = "ASCEND",
                 description = "Reset all — earn 1 Stellar Shard",
-                levelLabel = "PRESTIGE",
-                costText = "free",
-                canAfford = true,
-                onClick = onAscend
+                levelLabel  = "PRESTIGE",
+                cost        = null,
+                state       = state,
+                onClick     = onAscend
             )
         }
     }
@@ -288,7 +302,7 @@ fun SectionLabel(text: String) {
     Text(
         text = text,
         color = AsteroidsGreen.copy(alpha = 0.35f),
-        fontFamily = FontFamily.Monospace,
+        fontFamily = AsteroidsFont,
         fontSize = 10.sp,
         letterSpacing = 2.sp
     )
@@ -299,15 +313,17 @@ fun UpgradeCard(
     name: String,
     description: String,
     levelLabel: String,
-    costText: String,
-    canAfford: Boolean,
+    cost: BuildCost?,
+    state: GameState,
     onClick: () -> Unit
 ) {
-    val lineColor = if (canAfford) AsteroidsGreen else AsteroidsGreen.copy(alpha = 0.2f)
+    val canAfford = cost == null || state.canAfford(cost)
+    val borderColor = if (canAfford) AsteroidsGreen else AsteroidsGreen.copy(alpha = 0.2f)
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .border(width = 1.dp, color = lineColor, shape = RoundedCornerShape(2.dp))
+            .border(width = 1.dp, color = borderColor, shape = RoundedCornerShape(2.dp))
             .clickable(enabled = canAfford) { onClick() }
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -318,43 +334,71 @@ fun UpgradeCard(
         ) {
             Text(
                 text = name,
-                color = lineColor,
-                fontFamily = FontFamily.Monospace,
+                color = borderColor,
+                fontFamily = AsteroidsFont,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
                 letterSpacing = 1.sp
             )
             Text(
                 text = levelLabel,
-                color = lineColor.copy(alpha = 0.7f),
-                fontFamily = FontFamily.Monospace,
+                color = borderColor.copy(alpha = 0.7f),
+                fontFamily = AsteroidsFont,
                 fontSize = 11.sp
             )
         }
         Text(
             text = description,
-            color = lineColor.copy(alpha = 0.55f),
-            fontFamily = FontFamily.Monospace,
+            color = borderColor.copy(alpha = 0.55f),
+            fontFamily = AsteroidsFont,
             fontSize = 11.sp
         )
-        Text(
-            text = "COST:  $costText",
-            color = lineColor.copy(alpha = 0.85f),
-            fontFamily = FontFamily.Monospace,
-            fontSize = 12.sp
-        )
+        if (cost != null) {
+            CostDisplay(cost = cost, state = state)
+        } else {
+            Text(
+                text = "COST  free",
+                color = AsteroidsGreen.copy(alpha = 0.85f),
+                fontFamily = AsteroidsFont,
+                fontSize = 12.sp
+            )
+        }
     }
 }
 
-private fun formatCost(cost: BuildCost): String {
-    val parts = mutableListOf<String>()
-    if (cost.iron > 0)     parts.add("${formatNumber(cost.iron)} iron")
-    if (cost.quartz > 0)   parts.add("${formatNumber(cost.quartz)} quartz")
-    if (cost.titanium > 0) parts.add("${formatNumber(cost.titanium)} titanium")
-    if (cost.energy > 0)   parts.add("${formatNumber(cost.energy)} energy")
-    if (cost.iridium > 0)  parts.add("${formatNumber(cost.iridium)} iridium")
-    if (cost.xenon > 0)    parts.add("${formatNumber(cost.xenon)} xenon")
-    return parts.joinToString(" + ")
+@Composable
+private fun CostDisplay(cost: BuildCost, state: GameState) {
+    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+        Text(
+            text = "COST",
+            color = AsteroidsGreen.copy(alpha = 0.45f),
+            fontFamily = AsteroidsFont,
+            fontSize = 9.sp,
+            letterSpacing = 2.sp
+        )
+        if (cost.iron > 0)
+            CostLine("${formatNumber(cost.iron)} IRON",     state.iron >= cost.iron)
+        if (cost.quartz > 0)
+            CostLine("${formatNumber(cost.quartz)} QUARTZ",  state.quartz >= cost.quartz)
+        if (cost.titanium > 0)
+            CostLine("${formatNumber(cost.titanium)} TITANIUM", state.titanium >= cost.titanium)
+        if (cost.energy > 0)
+            CostLine("${formatNumber(cost.energy)} ENERGY",  state.energy >= cost.energy)
+        if (cost.iridium > 0)
+            CostLine("${formatNumber(cost.iridium)} IRIDIUM", state.iridium >= cost.iridium)
+        if (cost.xenon > 0)
+            CostLine("${formatNumber(cost.xenon)} XENON",    state.xenon >= cost.xenon)
+    }
+}
+
+@Composable
+private fun CostLine(text: String, hasEnough: Boolean) {
+    Text(
+        text = text,
+        color = if (hasEnough) AsteroidsGreen.copy(alpha = 0.85f) else Color(0xFFFF4444),
+        fontFamily = AsteroidsFont,
+        fontSize = 12.sp
+    )
 }
 
 // ── PROGRESSION TREE ─────────────────────────────────────────────────────────
@@ -425,7 +469,7 @@ private fun TreeNodeItem(entry: TreeEntry, unlocked: Boolean) {
             Text(
                 text = entry.label,
                 color = color,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = AsteroidsFont,
                 fontWeight = FontWeight.Bold,
                 fontSize = 12.sp,
                 letterSpacing = 1.sp
@@ -433,14 +477,14 @@ private fun TreeNodeItem(entry: TreeEntry, unlocked: Boolean) {
             Text(
                 text = entry.detail,
                 color = color.copy(alpha = 0.6f),
-                fontFamily = FontFamily.Monospace,
+                fontFamily = AsteroidsFont,
                 fontSize = 10.sp
             )
         }
         Text(
             text = if (unlocked) "ACTIVE" else entry.lockedHint,
             color = color.copy(alpha = 0.75f),
-            fontFamily = FontFamily.Monospace,
+            fontFamily = AsteroidsFont,
             fontSize = 9.sp,
             letterSpacing = 0.5.sp
         )

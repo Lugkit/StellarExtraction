@@ -4,8 +4,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import com.lugkit.stellarextraction.R
 
 val AsteroidsGreen = Color(0xFF00FF41)
+val AsteroidsFont  = FontFamily(Font(R.font.share_tech_mono))
 
 private val ColorScheme = darkColorScheme(
     primary = AsteroidsGreen,
