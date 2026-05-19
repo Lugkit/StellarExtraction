@@ -70,7 +70,7 @@ fun ShopTab(
                     name        = "POWER CORE",
                     description = "3 energy/sec  •  upkeep: 1 quartz/sec",
                     levelLabel  = "BUILD",
-                    cost        = powerCoreCost,
+                    cost        = state.effectivePowerCoreCost(),
                     state       = state,
                     onClick     = onBuyPowerCore
                 )
@@ -122,7 +122,7 @@ fun ShopTab(
                 name        = "REFINERY",
                 description = "Convert resources downward — controls on mine screen",
                 levelLabel  = "BUILD",
-                cost        = refineryCost,
+                cost        = state.effectiveRefineryCost(),
                 state       = state,
                 onClick     = onBuyRefinery
             )
@@ -136,7 +136,7 @@ fun ShopTab(
                     name        = "LAUNCH SILO",
                     description = "Path A — titanium-heavy",
                     levelLabel  = "BUILD",
-                    cost        = launchSiloCostA,
+                    cost        = state.effectiveLaunchSiloCostA(),
                     state       = state,
                     onClick     = onBuyLaunchSiloA
                 )
@@ -145,7 +145,7 @@ fun ShopTab(
                 name        = "LAUNCH SILO",
                 description = "Path B — no titanium required",
                 levelLabel  = "BUILD",
-                cost        = launchSiloCostB,
+                cost        = state.effectiveLaunchSiloCostB(),
                 state       = state,
                 onClick     = onBuyLaunchSiloB
             )

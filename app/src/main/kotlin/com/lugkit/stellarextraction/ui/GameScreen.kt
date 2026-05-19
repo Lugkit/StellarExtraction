@@ -35,7 +35,7 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-private enum class Screen { MINE, SHOP, TREE }
+private enum class Screen { MINE, SHOP, TREE, ASC }
 
 @Composable
 fun GameScreen(vm: GameViewModel) {
@@ -43,6 +43,7 @@ fun GameScreen(vm: GameViewModel) {
     var screen by remember { mutableStateOf(Screen.MINE) }
 
     BackHandler(enabled = screen != Screen.MINE) { screen = Screen.MINE }
+
 
     Column(
         modifier = Modifier
@@ -57,6 +58,7 @@ fun GameScreen(vm: GameViewModel) {
                 Screen.MINE -> MineContent(vm = vm)
                 Screen.SHOP -> ShopContent(vm = vm)
                 Screen.TREE -> TreeContent(state = state)
+                Screen.ASC  -> AscContent(vm = vm)
             }
         }
 
@@ -71,6 +73,7 @@ fun GameScreen(vm: GameViewModel) {
             if (screen != Screen.MINE) NavLink("MINE") { screen = Screen.MINE }
             if (screen != Screen.SHOP) NavLink("SHOP") { screen = Screen.SHOP }
             if (screen != Screen.TREE) NavLink("TREE") { screen = Screen.TREE }
+            if (screen != Screen.ASC)  NavLink("SHARDS") { screen = Screen.ASC  }
         }
     }
 }
