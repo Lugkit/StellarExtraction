@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Wireframe planet — matches in-game aesthetic.
+    Viewport 108×108, planet centred at (54,54) radius 30.
+    Safe zone 72×72 (18→90): planet diameter 60 fits entirely inside.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Star dots (corner accents, outside safe zone) -->
+    <path
+        android:fillColor="#00FF41"
+        android:fillAlpha="0.35"
+        android:pathData="M14,17 A1.5,1.5 0 1,0 17,17 A1.5,1.5 0 1,0 14,17 Z
+                          M91,13 A1.2,1.2 0 1,0 93.4,13 A1.2,1.2 0 1,0 91,13 Z
+                          M13,90 A1.2,1.2 0 1,0 15.4,90 A1.2,1.2 0 1,0 13,90 Z
+                          M92,91 A1.5,1.5 0 1,0 95,91 A1.5,1.5 0 1,0 92,91 Z
+                          M22,28 A0.9,0.9 0 1,0 23.8,28 A0.9,0.9 0 1,0 22,28 Z
+                          M84,79 A0.9,0.9 0 1,0 85.8,79 A0.9,0.9 0 1,0 84,79 Z"/>
+
+    <!-- Planet outer circle -->
+    <path
+        android:strokeColor="#00FF41"
+        android:strokeWidth="2.5"
+        android:fillColor="#00000000"
+        android:pathData="M24,54 A30,30 0 1,0 84,54 A30,30 0 1,0 24,54 Z"/>
+
+    <!-- Latitude lines -->
+    <!-- Equatorial (t=0) -->
+    <path
+        android:strokeColor="#00FF41"
+        android:strokeWidth="1.5"
+        android:strokeAlpha="0.38"
+        android:fillColor="#00000000"
+        android:pathData="M24,54 A30,8.4 0 1,0 84,54 A30,8.4 0 1,0 24,54 Z"/>
+
+    <!-- Upper (t=-0.5, y=39) -->
+    <path
+        android:strokeColor="#00FF41"
+        android:strokeWidth="1.5"
+        android:strokeAlpha="0.38"
+        android:fillColor="#00000000"
+        android:pathData="M28,39 A26,7.3 0 1,0 80,39 A26,7.3 0 1,0 28,39 Z"/>
+
+    <!-- Lower (t=+0.5, y=69) -->
+    <path
+        android:strokeColor="#00FF41"
+        android:strokeWidth="1.5"
+        android:strokeAlpha="0.38"
+        android:fillColor="#00000000"
+        android:pathData="M28,69 A26,7.3 0 1,0 80,69 A26,7.3 0 1,0 28,69 Z"/>
+
+    <!-- Meridian lines (thin vertical ellipse, rotated) -->
+    <!-- Centre meridian (0°) -->
+    <path
+        android:strokeColor="#00FF41"
+        android:strokeWidth="1.5"
+        android:strokeAlpha="0.38"
+        android:fillColor="#00000000"
+        android:pathData="M48.6,54 A5.4,30 0 1,0 59.4,54 A5.4,30 0 1,0 48.6,54 Z"/>
+
+    <!-- Meridian +40° -->
+    <group
+        android:rotation="40"
+        android:pivotX="54"
+        android:pivotY="54">
+        <path
+            android:strokeColor="#00FF41"
+            android:strokeWidth="1.5"
+            android:strokeAlpha="0.38"
+            android:fillColor="#00000000"
+            android:pathData="M48.6,54 A5.4,30 0 1,0 59.4,54 A5.4,30 0 1,0 48.6,54 Z"/>
+    </group>
+
+    <!-- Meridian -40° -->
+    <group
+        android:rotation="-40"
+        android:pivotX="54"
+        android:pivotY="54">
+        <path
+            android:strokeColor="#00FF41"
+            android:strokeWidth="1.5"
+            android:strokeAlpha="0.38"
+            android:fillColor="#00000000"
+            android:pathData="M48.6,54 A5.4,30 0 1,0 59.4,54 A5.4,30 0 1,0 48.6,54 Z"/>
+    </group>
+
+</vector>
