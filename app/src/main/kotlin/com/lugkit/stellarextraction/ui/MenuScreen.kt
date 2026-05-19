@@ -120,35 +120,11 @@ fun ShopTab(
             SectionLabel("REFINERY")
             UpgradeCard(
                 name        = "REFINERY",
-                description = "Convert resources downward",
+                description = "Convert resources downward — controls on mine screen",
                 levelLabel  = "BUILD",
                 cost        = refineryCost,
                 state       = state,
                 onClick     = onBuyRefinery
-            )
-        }
-        if (state.hasRefinery) {
-            SectionLabel("REFINERY")
-            ConvertCard(
-                label    = "SMELT IRIDIUM",
-                fromText = "1 IRIDIUM",
-                toText   = "3 TITANIUM",
-                canAfford= state.iridium >= 1.0,
-                onClick  = { onRefineryConvert(Resource.IRIDIUM) }
-            )
-            ConvertCard(
-                label    = "SMELT TITANIUM",
-                fromText = "1 TITANIUM",
-                toText   = "5 QUARTZ",
-                canAfford= state.titanium >= 1.0,
-                onClick  = { onRefineryConvert(Resource.TITANIUM) }
-            )
-            ConvertCard(
-                label    = "SMELT QUARTZ",
-                fromText = "1 QUARTZ",
-                toText   = "5 IRON",
-                canAfford= state.quartz >= 1.0,
-                onClick  = { onRefineryConvert(Resource.QUARTZ) }
             )
         }
 

@@ -44,7 +44,8 @@ data class GameState(
     val hasOrbitalSolarStation: Boolean = false,
     val hasRefinery: Boolean = false,
     val hasCoreTap: Boolean = false,
-    val hasPlanetCore: Boolean = false
+    val hasPlanetCore: Boolean = false,
+    val buildingSeed: Long = 12345L
 ) {
     val ironPerSec: Double get() = when (drillHeadLevel) {
         1 -> 1.0; 2 -> 3.0; 3 -> 9.0; 4 -> 27.0; else -> 0.0
@@ -169,6 +170,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 put("hasRefinery",             s.hasRefinery)
                 put("hasCoreTap",              s.hasCoreTap)
                 put("hasPlanetCore",           s.hasPlanetCore)
+                put("buildingSeed",            s.buildingSeed)
                 put("savedAt",                 System.currentTimeMillis())
             }.toString()
             prefs.edit().putString("game_state", json).apply()
@@ -200,7 +202,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 hasOrbitalSolarStation = obj.optBoolean("hasOrbitalSolarStation", false),
                 hasRefinery            = obj.optBoolean("hasRefinery", false),
                 hasCoreTap             = obj.getBoolean("hasCoreTap"),
-                hasPlanetCore          = obj.getBoolean("hasPlanetCore")
+                hasPlanetCore          = obj.getBoolean("hasPlanetCore"),
+                buildingSeed           = obj.optLong("buildingSeed", 12345L)
             )
             _state.value = if (elapsed > 1) s.applyProduction(elapsed) else s
         } catch (_: Exception) {}
@@ -333,7 +336,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun ascend() {
         val s = _state.value
         if (!s.hasPlanetCore) return
-        _state.value = GameState(stellarShards = s.stellarShards + 1)
+        _state.value = GameState(stellarShards = s.stellarShards + 1, buildingSeed = System.nanoTime())
         saveState()
     }
 
