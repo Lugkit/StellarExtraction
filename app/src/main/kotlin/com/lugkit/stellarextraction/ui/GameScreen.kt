@@ -39,18 +39,23 @@ fun GameScreen(vm: GameViewModel) {
 
     when (screen) {
         Screen.SHOP -> ShopScreen(
-            state               = state,
-            onBuyDrillHead      = vm::buyDrillHead,
-            onBuyPowerCore      = vm::buyPowerCore,
-            onBuyDeepShaft      = vm::buyDeepShaft,
-            onBuyLaunchSilo     = vm::buyLaunchSilo,
-            onBuyRelaySatellite = vm::buyRelaySatellite,
-            onBuyOrbitalLab     = vm::buyOrbitalLab,
-            onBuyAsteroidMiner  = vm::buyAsteroidMiner,
-            onBuyCoreTap        = vm::buyCoreTap,
-            onBuyPlanetCore     = vm::buyPlanetCore,
-            onAscend            = vm::ascend,
-            onClose             = { screen = Screen.MAIN }
+            state                    = state,
+            onBuyDrillHead           = vm::buyDrillHead,
+            onBuyPowerCore           = vm::buyPowerCore,
+            onBuySolarArray          = vm::buySolarArray,
+            onBuyDeepShaft           = vm::buyDeepShaft,
+            onBuyRefinery            = vm::buyRefinery,
+            onBuyLaunchSiloA         = vm::buyLaunchSiloA,
+            onBuyLaunchSiloB         = vm::buyLaunchSiloB,
+            onBuyRelaySatellite      = vm::buyRelaySatellite,
+            onBuyOrbitalLab          = vm::buyOrbitalLab,
+            onBuyAsteroidMiner       = vm::buyAsteroidMiner,
+            onBuyOrbitalSolarStation = vm::buyOrbitalSolarStation,
+            onBuyCoreTap             = vm::buyCoreTap,
+            onBuyPlanetCore          = vm::buyPlanetCore,
+            onAscend                 = vm::ascend,
+            onRefineryConvert        = vm::refineryConvert,
+            onClose                  = { screen = Screen.MAIN }
         )
         Screen.TREE -> TreeScreen(
             state   = state,
@@ -105,42 +110,15 @@ private fun MainView(vm: GameViewModel, onShop: () -> Unit, onTree: () -> Unit) 
         }
         HRule()
 
-        // Resources | Planet
-        Row(
+        // Planet centered on full width, resources overlaid on left
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
-            verticalAlignment = Alignment.Top
+                .weight(1f)
         ) {
-            // Left: resources
-            Column(
-                modifier = Modifier
-                    .width(100.dp)
-                    .fillMaxHeight()
-                    .verticalScroll(rememberScrollState())
-                    .padding(start = 12.dp, top = 14.dp, bottom = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                ResourceItem("IRON",   state.iron,   state.ironPerSec)     { vm.focusedStrike(Resource.IRON) }
-                if (state.quartzVisible)
-                    ResourceItem("QUARTZ", state.quartz, state.quartzPerSec)   { vm.focusedStrike(Resource.QUARTZ) }
-                if (state.energyVisible)
-                    ResourceItem("ENERGY", state.energy, state.energyPerSec)   { vm.focusedStrike(Resource.ENERGY) }
-                if (state.titaniumVisible)
-                    ResourceItem("TITAN",  state.titanium, state.titaniumPerSec) { vm.focusedStrike(Resource.TITANIUM) }
-                if (state.iridiumVisible)
-                    ResourceItem("IRIDIUM", state.iridium, state.iridiumPerSec) { vm.focusedStrike(Resource.IRIDIUM) }
-                if (state.xenonVisible)
-                    ResourceItem("XENON",  state.xenon, state.xenonPerSec)     { vm.focusedStrike(Resource.XENON) }
-                if (state.stellarShardsVisible)
-                    ResourceItem("SHARDS", state.stellarShards.toDouble(), 0.0)
-            }
-
-            // Center: planet
+            // Planet — truly centered on screen
             Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -155,6 +133,35 @@ private fun MainView(vm: GameViewModel, onShop: () -> Unit, onTree: () -> Unit) 
                         fontSize = 10.sp,
                         letterSpacing = 3.sp
                     )
+                }
+            }
+
+            // Resources overlaid on left, split above/below planet
+            Column(
+                modifier = Modifier
+                    .width(96.dp)
+                    .fillMaxHeight()
+                    .padding(start = 12.dp, top = 14.dp, bottom = 14.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Upper group — basic resources
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    ResourceItem("IRON",   state.iron,   state.ironPerSec) { vm.focusedStrike(Resource.IRON) }
+                    if (state.quartzVisible)
+                        ResourceItem("QUARTZ", state.quartz, state.quartzPerSec) { vm.focusedStrike(Resource.QUARTZ) }
+                    if (state.energyVisible)
+                        ResourceItem("ENERGY", state.energy, state.energyPerSec) { vm.focusedStrike(Resource.ENERGY) }
+                }
+                // Lower group — deep/orbital resources
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (state.titaniumVisible)
+                        ResourceItem("TITAN",  state.titanium, state.titaniumPerSec) { vm.focusedStrike(Resource.TITANIUM) }
+                    if (state.iridiumVisible)
+                        ResourceItem("IRIDIUM", state.iridium, state.iridiumPerSec) { vm.focusedStrike(Resource.IRIDIUM) }
+                    if (state.xenonVisible)
+                        ResourceItem("XENON",  state.xenon, state.xenonPerSec) { vm.focusedStrike(Resource.XENON) }
+                    if (state.stellarShardsVisible)
+                        ResourceItem("SHARDS", state.stellarShards.toDouble(), 0.0)
                 }
             }
         }

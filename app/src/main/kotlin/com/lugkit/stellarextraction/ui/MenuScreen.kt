@@ -22,28 +22,37 @@ fun ShopScreen(
     state: GameState,
     onBuyDrillHead: () -> Unit,
     onBuyPowerCore: () -> Unit,
+    onBuySolarArray: () -> Unit,
     onBuyDeepShaft: () -> Unit,
-    onBuyLaunchSilo: () -> Unit,
+    onBuyRefinery: () -> Unit,
+    onBuyLaunchSiloA: () -> Unit,
+    onBuyLaunchSiloB: () -> Unit,
     onBuyRelaySatellite: () -> Unit,
     onBuyOrbitalLab: () -> Unit,
     onBuyAsteroidMiner: () -> Unit,
+    onBuyOrbitalSolarStation: () -> Unit,
     onBuyCoreTap: () -> Unit,
     onBuyPlanetCore: () -> Unit,
     onAscend: () -> Unit,
+    onRefineryConvert: (Resource) -> Unit,
     onClose: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(androidx.compose.ui.graphics.Color.Black)
+            .background(Color.Black)
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
         FullScreenHeader(title = "SHOP")
         Box(modifier = Modifier.weight(1f)) {
-            ShopTab(state, onBuyDrillHead, onBuyPowerCore, onBuyDeepShaft,
-                    onBuyLaunchSilo, onBuyRelaySatellite, onBuyOrbitalLab,
-                    onBuyAsteroidMiner, onBuyCoreTap, onBuyPlanetCore, onAscend)
+            ShopTab(
+                state, onBuyDrillHead, onBuyPowerCore, onBuySolarArray,
+                onBuyDeepShaft, onBuyRefinery, onBuyLaunchSiloA, onBuyLaunchSiloB,
+                onBuyRelaySatellite, onBuyOrbitalLab, onBuyAsteroidMiner,
+                onBuyOrbitalSolarStation, onBuyCoreTap, onBuyPlanetCore,
+                onAscend, onRefineryConvert
+            )
         }
         BottomNav(onClose = onClose)
     }
@@ -54,7 +63,7 @@ fun TreeScreen(state: GameState, onClose: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(androidx.compose.ui.graphics.Color.Black)
+            .background(Color.Black)
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
@@ -71,7 +80,7 @@ private fun FullScreenHeader(title: String) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(androidx.compose.ui.graphics.Color(0xFF050505))
+            .background(Color(0xFF050505))
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Text(
@@ -133,14 +142,19 @@ fun ShopTab(
     state: GameState,
     onBuyDrillHead: () -> Unit,
     onBuyPowerCore: () -> Unit,
+    onBuySolarArray: () -> Unit,
     onBuyDeepShaft: () -> Unit,
-    onBuyLaunchSilo: () -> Unit,
+    onBuyRefinery: () -> Unit,
+    onBuyLaunchSiloA: () -> Unit,
+    onBuyLaunchSiloB: () -> Unit,
     onBuyRelaySatellite: () -> Unit,
     onBuyOrbitalLab: () -> Unit,
     onBuyAsteroidMiner: () -> Unit,
+    onBuyOrbitalSolarStation: () -> Unit,
     onBuyCoreTap: () -> Unit,
     onBuyPlanetCore: () -> Unit,
-    onAscend: () -> Unit
+    onAscend: () -> Unit,
+    onRefineryConvert: (Resource) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -149,7 +163,7 @@ fun ShopTab(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // ── Drill Head ────────────────────────────────────────────────────────
+        // ── MINING ────────────────────────────────────────────────────────────
         if (state.drillHeadLevel < 4) {
             val next = state.drillHeadLevel + 1
             val cost = drillHeadCosts[next]!!
@@ -165,59 +179,120 @@ fun ShopTab(
             )
         }
 
-        // ── Power Core ────────────────────────────────────────────────────────
-        if (state.powerCoreLevel < 1 && state.drillHeadLevel >= 2) {
+        // ── ENERGY ────────────────────────────────────────────────────────────
+        if (state.drillHeadLevel >= 2) {
             SectionLabel("ENERGY")
-            UpgradeCard(
-                name        = "POWER CORE",
-                description = "1 energy/sec",
-                levelLabel  = "BUILD",
-                cost        = powerCoreCost,
-                state       = state,
-                onClick     = onBuyPowerCore
-            )
+
+            if (state.powerCoreLevel < 1) {
+                UpgradeCard(
+                    name        = "POWER CORE",
+                    description = "3 energy/sec  •  upkeep: 1 quartz/sec",
+                    levelLabel  = "BUILD",
+                    cost        = powerCoreCost,
+                    state       = state,
+                    onClick     = onBuyPowerCore
+                )
+            }
+
+            if (state.solarArrayLevel < 2) {
+                val next = state.solarArrayLevel + 1
+                val cost = solarArrayCosts[next]!!
+                val prod = next // lv1=1, lv2=2
+                UpgradeCard(
+                    name        = "SOLAR ARRAY",
+                    description = "$prod energy/sec  •  no upkeep",
+                    levelLabel  = if (state.solarArrayLevel == 0) "BUILD" else "LV1 → LV2",
+                    cost        = cost,
+                    state       = state,
+                    onClick     = onBuySolarArray
+                )
+            }
         }
 
-        // ── Deep Shaft lv1 ────────────────────────────────────────────────────
-        if (state.deepShaftLevel < 1 && state.drillHeadLevel >= 3) {
+        // ── DEEP MINING ───────────────────────────────────────────────────────
+        if (state.drillHeadLevel >= 3 && state.deepShaftLevel < 2) {
             SectionLabel("DEEP MINING")
+            if (state.deepShaftLevel < 1) {
+                UpgradeCard(
+                    name        = "DEEP SHAFT",
+                    description = "0.5 titanium/sec",
+                    levelLabel  = "BUILD",
+                    cost        = deepShaftCosts[1]!!,
+                    state       = state,
+                    onClick     = onBuyDeepShaft
+                )
+            } else if (state.drillHeadLevel >= 4) {
+                UpgradeCard(
+                    name        = "DEEP SHAFT LV.2",
+                    description = "0.15 iridium/sec",
+                    levelLabel  = "UPGRADE",
+                    cost        = deepShaftCosts[2]!!,
+                    state       = state,
+                    onClick     = onBuyDeepShaft
+                )
+            }
+        }
+
+        // ── REFINERY (optional sidegrade) ─────────────────────────────────────
+        if (state.drillHeadLevel >= 3 && !state.hasRefinery) {
+            SectionLabel("REFINERY")
             UpgradeCard(
-                name        = "DEEP SHAFT",
-                description = "0.2 titanium/sec",
+                name        = "REFINERY",
+                description = "Convert resources downward",
                 levelLabel  = "BUILD",
-                cost        = deepShaftCosts[1]!!,
+                cost        = refineryCost,
                 state       = state,
-                onClick     = onBuyDeepShaft
+                onClick     = onBuyRefinery
+            )
+        }
+        if (state.hasRefinery) {
+            SectionLabel("REFINERY")
+            ConvertCard(
+                label    = "SMELT IRIDIUM",
+                fromText = "1 IRIDIUM",
+                toText   = "3 TITANIUM",
+                canAfford= state.iridium >= 1.0,
+                onClick  = { onRefineryConvert(Resource.IRIDIUM) }
+            )
+            ConvertCard(
+                label    = "SMELT TITANIUM",
+                fromText = "1 TITANIUM",
+                toText   = "5 QUARTZ",
+                canAfford= state.titanium >= 1.0,
+                onClick  = { onRefineryConvert(Resource.TITANIUM) }
+            )
+            ConvertCard(
+                label    = "SMELT QUARTZ",
+                fromText = "1 QUARTZ",
+                toText   = "5 IRON",
+                canAfford= state.quartz >= 1.0,
+                onClick  = { onRefineryConvert(Resource.QUARTZ) }
             )
         }
 
-        // ── Launch Silo ───────────────────────────────────────────────────────
-        if (!state.hasLaunchSilo && state.deepShaftLevel >= 1) {
+        // ── ORBITAL ───────────────────────────────────────────────────────────
+        if (!state.hasLaunchSilo && state.drillHeadLevel >= 3) {
             SectionLabel("ORBITAL")
+            if (state.deepShaftLevel >= 1) {
+                UpgradeCard(
+                    name        = "LAUNCH SILO",
+                    description = "Path A — titanium-heavy",
+                    levelLabel  = "BUILD",
+                    cost        = launchSiloCostA,
+                    state       = state,
+                    onClick     = onBuyLaunchSiloA
+                )
+            }
             UpgradeCard(
                 name        = "LAUNCH SILO",
-                description = "Enables orbital launches",
+                description = "Path B — no titanium required",
                 levelLabel  = "BUILD",
-                cost        = launchSiloCost,
+                cost        = launchSiloCostB,
                 state       = state,
-                onClick     = onBuyLaunchSilo
+                onClick     = onBuyLaunchSiloB
             )
         }
 
-        // ── Deep Shaft lv2 ────────────────────────────────────────────────────
-        if (state.deepShaftLevel < 2 && state.deepShaftLevel >= 1 && state.drillHeadLevel >= 4) {
-            SectionLabel("DEEP MINING")
-            UpgradeCard(
-                name        = "DEEP SHAFT LV.2",
-                description = "0.05 iridium/sec",
-                levelLabel  = "UPGRADE",
-                cost        = deepShaftCosts[2]!!,
-                state       = state,
-                onClick     = onBuyDeepShaft
-            )
-        }
-
-        // ── Relay Satellite ───────────────────────────────────────────────────
         if (!state.hasRelaySatellite && state.hasLaunchSilo) {
             SectionLabel("ORBITAL")
             UpgradeCard(
@@ -230,7 +305,6 @@ fun ShopTab(
             )
         }
 
-        // ── Orbital Lab ───────────────────────────────────────────────────────
         if (!state.hasOrbitalLab && state.hasRelaySatellite) {
             SectionLabel("ORBITAL")
             UpgradeCard(
@@ -243,12 +317,11 @@ fun ShopTab(
             )
         }
 
-        // ── Asteroid Miner ────────────────────────────────────────────────────
         if (!state.hasAsteroidMiner && state.hasOrbitalLab) {
             SectionLabel("ORBITAL")
             UpgradeCard(
                 name        = "ASTEROID MINER",
-                description = "0.02 xenon/sec",
+                description = "0.05 xenon/sec",
                 levelLabel  = "DEPLOY",
                 cost        = asteroidMinerCost,
                 state       = state,
@@ -256,7 +329,19 @@ fun ShopTab(
             )
         }
 
-        // ── Core Tap ─────────────────────────────────────────────────────────
+        if (!state.hasOrbitalSolarStation && state.hasOrbitalLab && state.solarArrayLevel >= 2) {
+            SectionLabel("ENERGY")
+            UpgradeCard(
+                name        = "ORBITAL SOLAR STATION",
+                description = "20 energy/sec  •  no upkeep",
+                levelLabel  = "BUILD",
+                cost        = orbitalSolarStationCost,
+                state       = state,
+                onClick     = onBuyOrbitalSolarStation
+            )
+        }
+
+        // ── CORE ──────────────────────────────────────────────────────────────
         if (!state.hasCoreTap && state.drillHeadLevel >= 4) {
             SectionLabel("CORE")
             UpgradeCard(
@@ -269,7 +354,6 @@ fun ShopTab(
             )
         }
 
-        // ── Planet Core ───────────────────────────────────────────────────────
         if (!state.hasPlanetCore && state.hasCoreTap) {
             SectionLabel("CORE")
             UpgradeCard(
@@ -282,7 +366,7 @@ fun ShopTab(
             )
         }
 
-        // ── Ascend ────────────────────────────────────────────────────────────
+        // ── PRESTIGE ──────────────────────────────────────────────────────────
         if (state.hasPlanetCore) {
             SectionLabel("PRESTIGE")
             UpgradeCard(
@@ -332,62 +416,56 @@ fun UpgradeCard(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = name,
-                color = borderColor,
-                fontFamily = AsteroidsFont,
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
-                letterSpacing = 1.sp
-            )
-            Text(
-                text = levelLabel,
-                color = borderColor.copy(alpha = 0.7f),
-                fontFamily = AsteroidsFont,
-                fontSize = 11.sp
-            )
+            Text(name, color = borderColor, fontFamily = AsteroidsFont, fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 1.sp)
+            Text(levelLabel, color = borderColor.copy(alpha = 0.7f), fontFamily = AsteroidsFont, fontSize = 11.sp)
         }
-        Text(
-            text = description,
-            color = borderColor.copy(alpha = 0.55f),
-            fontFamily = AsteroidsFont,
-            fontSize = 11.sp
-        )
+        Text(description, color = borderColor.copy(alpha = 0.55f), fontFamily = AsteroidsFont, fontSize = 11.sp)
         if (cost != null) {
             CostDisplay(cost = cost, state = state)
         } else {
-            Text(
-                text = "COST  free",
-                color = AsteroidsGreen.copy(alpha = 0.85f),
-                fontFamily = AsteroidsFont,
-                fontSize = 12.sp
-            )
+            Text("COST  free", color = AsteroidsGreen.copy(alpha = 0.85f), fontFamily = AsteroidsFont, fontSize = 12.sp)
         }
+    }
+}
+
+@Composable
+private fun ConvertCard(
+    label: String,
+    fromText: String,
+    toText: String,
+    canAfford: Boolean,
+    onClick: () -> Unit
+) {
+    val borderColor = if (canAfford) AsteroidsGreen.copy(alpha = 0.5f) else AsteroidsGreen.copy(alpha = 0.15f)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(width = 1.dp, color = borderColor, shape = RoundedCornerShape(2.dp))
+            .clickable(enabled = canAfford) { onClick() }
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, color = borderColor, fontFamily = AsteroidsFont, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(
+            text = "$fromText  →  $toText",
+            color = borderColor.copy(alpha = 0.8f),
+            fontFamily = AsteroidsFont,
+            fontSize = 10.sp
+        )
     }
 }
 
 @Composable
 private fun CostDisplay(cost: BuildCost, state: GameState) {
     Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-        Text(
-            text = "COST",
-            color = AsteroidsGreen.copy(alpha = 0.45f),
-            fontFamily = AsteroidsFont,
-            fontSize = 9.sp,
-            letterSpacing = 2.sp
-        )
-        if (cost.iron > 0)
-            CostLine("${formatNumber(cost.iron)} IRON",     state.iron >= cost.iron)
-        if (cost.quartz > 0)
-            CostLine("${formatNumber(cost.quartz)} QUARTZ",  state.quartz >= cost.quartz)
-        if (cost.titanium > 0)
-            CostLine("${formatNumber(cost.titanium)} TITANIUM", state.titanium >= cost.titanium)
-        if (cost.energy > 0)
-            CostLine("${formatNumber(cost.energy)} ENERGY",  state.energy >= cost.energy)
-        if (cost.iridium > 0)
-            CostLine("${formatNumber(cost.iridium)} IRIDIUM", state.iridium >= cost.iridium)
-        if (cost.xenon > 0)
-            CostLine("${formatNumber(cost.xenon)} XENON",    state.xenon >= cost.xenon)
+        Text("COST", color = AsteroidsGreen.copy(alpha = 0.45f), fontFamily = AsteroidsFont, fontSize = 9.sp, letterSpacing = 2.sp)
+        if (cost.iron > 0)     CostLine("${formatNumber(cost.iron)} IRON",     state.iron >= cost.iron)
+        if (cost.quartz > 0)   CostLine("${formatNumber(cost.quartz)} QUARTZ",  state.quartz >= cost.quartz)
+        if (cost.titanium > 0) CostLine("${formatNumber(cost.titanium)} TITANIUM", state.titanium >= cost.titanium)
+        if (cost.energy > 0)   CostLine("${formatNumber(cost.energy)} ENERGY",  state.energy >= cost.energy)
+        if (cost.iridium > 0)  CostLine("${formatNumber(cost.iridium)} IRIDIUM", state.iridium >= cost.iridium)
+        if (cost.xenon > 0)    CostLine("${formatNumber(cost.xenon)} XENON",    state.xenon >= cost.xenon)
     }
 }
 
@@ -411,22 +489,27 @@ private class TreeEntry(
 )
 
 private val treeEntries = listOf(
-    TreeEntry("PICKAXE",           "Manual strike mining",          "ACTIVE")          { true },
-    TreeEntry("DRILL HEAD LV.1",   "1 iron/sec",                   "BUY IN SHOP")      { it.drillHeadLevel >= 1 },
-    TreeEntry("DRILL HEAD LV.2",   "3 iron/sec  +  quartz",        "NEED DRILL LV.1")  { it.drillHeadLevel >= 2 },
-    TreeEntry("POWER CORE",        "1 energy/sec",                  "NEED DRILL LV.2")  { it.powerCoreLevel >= 1 },
-    TreeEntry("DRILL HEAD LV.3",   "9 iron/sec",                   "NEED DRILL LV.2")  { it.drillHeadLevel >= 3 },
-    TreeEntry("DEEP SHAFT",        "0.2 titanium/sec",              "NEED DRILL LV.3")  { it.deepShaftLevel >= 1 },
-    TreeEntry("LAUNCH SILO",       "Orbital launch capability",     "NEED DEEP SHAFT")  { it.hasLaunchSilo },
-    TreeEntry("DRILL HEAD LV.4",   "27 iron/sec",                  "NEED DRILL LV.3")  { it.drillHeadLevel >= 4 },
-    TreeEntry("DEEP SHAFT LV.2",   "0.05 iridium/sec",             "NEED DRILL LV.4")  { it.deepShaftLevel >= 2 },
-    TreeEntry("RELAY SATELLITE",   "Orbital communications",        "NEED SILO")        { it.hasRelaySatellite },
-    TreeEntry("ORBITAL LAB",       "Advanced research",             "NEED RELAY")       { it.hasOrbitalLab },
-    TreeEntry("ASTEROID MINER",    "0.02 xenon/sec",               "NEED LAB")         { it.hasAsteroidMiner },
-    TreeEntry("CORE TAP",          "Planet core access",            "NEED DRILL LV.4")  { it.hasCoreTap },
-    TreeEntry("PLANET CORE",       "Pre-ascension",                 "NEED CORE TAP")    { it.hasPlanetCore },
-    TreeEntry("ASCEND",            "Reset  →  +1 Stellar Shard",   "NEED PLANET CORE") { it.stellarShards > 0 },
-    TreeEntry("STELLAR SHARDS",    "Permanent prestige currency",   "ASCEND FIRST")     { it.stellarShards > 0 }
+    TreeEntry("PICKAXE",                "Manual strike mining",           "ACTIVE")             { true },
+    TreeEntry("DRILL HEAD LV.1",        "1 iron/sec",                     "BUY IN SHOP")         { it.drillHeadLevel >= 1 },
+    TreeEntry("DRILL HEAD LV.2",        "3 iron/sec  +  quartz",          "NEED DRILL LV.1")     { it.drillHeadLevel >= 2 },
+    TreeEntry("POWER CORE",             "3 energy/sec  •  1 quartz/sec upkeep", "NEED DRILL LV.2") { it.powerCoreLevel >= 1 },
+    TreeEntry("SOLAR ARRAY LV.1",       "1 energy/sec  •  no upkeep",     "NEED DRILL LV.2")     { it.solarArrayLevel >= 1 },
+    TreeEntry("SOLAR ARRAY LV.2",       "2 energy/sec  •  no upkeep",     "NEED SOLAR LV.1")     { it.solarArrayLevel >= 2 },
+    TreeEntry("DRILL HEAD LV.3",        "9 iron/sec",                     "NEED DRILL LV.2")     { it.drillHeadLevel >= 3 },
+    TreeEntry("DEEP SHAFT",             "0.5 titanium/sec",               "NEED DRILL LV.3")     { it.deepShaftLevel >= 1 },
+    TreeEntry("REFINERY",               "Downward resource conversion",   "NEED DRILL LV.3")     { it.hasRefinery },
+    TreeEntry("LAUNCH SILO (PATH A)",   "28K iron + 500 titan",           "NEED DEEP SHAFT")     { it.hasLaunchSilo },
+    TreeEntry("LAUNCH SILO (PATH B)",   "15K iron + 2K quartz",           "NEED DRILL LV.3")     { it.hasLaunchSilo },
+    TreeEntry("DRILL HEAD LV.4",        "27 iron/sec",                    "NEED DRILL LV.3")     { it.drillHeadLevel >= 4 },
+    TreeEntry("DEEP SHAFT LV.2",        "0.15 iridium/sec",               "NEED DRILL LV.4")     { it.deepShaftLevel >= 2 },
+    TreeEntry("RELAY SATELLITE",        "Orbital communications",          "NEED SILO")           { it.hasRelaySatellite },
+    TreeEntry("ORBITAL LAB",            "Advanced research",               "NEED RELAY")          { it.hasOrbitalLab },
+    TreeEntry("ASTEROID MINER",         "0.05 xenon/sec",                 "NEED LAB")            { it.hasAsteroidMiner },
+    TreeEntry("ORBITAL SOLAR STATION",  "20 energy/sec  •  no upkeep",    "NEED LAB + SOLAR LV2") { it.hasOrbitalSolarStation },
+    TreeEntry("CORE TAP",               "Planet core access",              "NEED DRILL LV.4")     { it.hasCoreTap },
+    TreeEntry("PLANET CORE",            "Pre-ascension",                   "NEED CORE TAP")       { it.hasPlanetCore },
+    TreeEntry("ASCEND",                 "Reset  →  +1 Stellar Shard",     "NEED PLANET CORE")    { it.stellarShards > 0 },
+    TreeEntry("STELLAR SHARDS",         "Permanent prestige currency",     "ASCEND FIRST")        { it.stellarShards > 0 }
 )
 
 @Composable
@@ -446,7 +529,7 @@ fun TreeTab(state: GameState) {
                 Box(
                     modifier = Modifier
                         .width(1.dp)
-                        .height(28.dp)
+                        .height(20.dp)
                         .background(AsteroidsGreen.copy(alpha = if (unlocked && nextUnlocked) 0.5f else 0.12f))
                 )
             }
@@ -466,20 +549,8 @@ private fun TreeNodeItem(entry: TreeEntry, unlocked: Boolean) {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(
-                text = entry.label,
-                color = color,
-                fontFamily = AsteroidsFont,
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.sp,
-                letterSpacing = 1.sp
-            )
-            Text(
-                text = entry.detail,
-                color = color.copy(alpha = 0.6f),
-                fontFamily = AsteroidsFont,
-                fontSize = 10.sp
-            )
+            Text(entry.label, color = color, fontFamily = AsteroidsFont, fontWeight = FontWeight.Bold, fontSize = 12.sp, letterSpacing = 1.sp)
+            Text(entry.detail, color = color.copy(alpha = 0.6f), fontFamily = AsteroidsFont, fontSize = 10.sp)
         }
         Text(
             text = if (unlocked) "ACTIVE" else entry.lockedHint,

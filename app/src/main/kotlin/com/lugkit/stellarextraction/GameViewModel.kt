@@ -35,29 +35,41 @@ data class GameState(
 
     val drillHeadLevel: Int = 0,
     val powerCoreLevel: Int = 0,
+    val solarArrayLevel: Int = 0,       // 0=none, 1=lv1, 2=lv2
     val deepShaftLevel: Int = 0,
     val hasLaunchSilo: Boolean = false,
     val hasRelaySatellite: Boolean = false,
     val hasOrbitalLab: Boolean = false,
     val hasAsteroidMiner: Boolean = false,
+    val hasOrbitalSolarStation: Boolean = false,
+    val hasRefinery: Boolean = false,
     val hasCoreTap: Boolean = false,
     val hasPlanetCore: Boolean = false
 ) {
     val ironPerSec: Double get() = when (drillHeadLevel) {
         1 -> 1.0; 2 -> 3.0; 3 -> 9.0; 4 -> 27.0; else -> 0.0
     }
-    val quartzPerSec: Double   get() = if (drillHeadLevel >= 2) 0.5 else 0.0
-    val energyPerSec: Double   get() = if (powerCoreLevel >= 1) 1.0 else 0.0
+    // Quartz: drill produces 0.5/s, Power Core consumes 1/s upkeep
+    val quartzBasePerSec: Double  get() = if (drillHeadLevel >= 2) 0.5 else 0.0
+    val quartzUpkeep: Double      get() = if (powerCoreLevel >= 1) 1.0 else 0.0
+    val quartzPerSec: Double      get() = quartzBasePerSec - quartzUpkeep
+
+    val solarPerSec: Double get() = solarArrayLevel.toDouble()          // lv1=1, lv2=2
+    val energyPerSec: Double get() =
+        (if (powerCoreLevel >= 1) 3.0 else 0.0) +
+        solarPerSec +
+        (if (hasOrbitalSolarStation) 20.0 else 0.0)
+
     val titaniumPerSec: Double get() = if (deepShaftLevel >= 1) 0.5  else 0.0
     val iridiumPerSec: Double  get() = if (deepShaftLevel >= 2) 0.15 else 0.0
     val xenonPerSec: Double    get() = if (hasAsteroidMiner)    0.05 else 0.0
 
-    val quartzVisible: Boolean        get() = drillHeadLevel >= 2
-    val energyVisible: Boolean        get() = powerCoreLevel >= 1
-    val titaniumVisible: Boolean      get() = deepShaftLevel >= 1
-    val iridiumVisible: Boolean       get() = deepShaftLevel >= 2
-    val xenonVisible: Boolean         get() = hasAsteroidMiner
-    val stellarShardsVisible: Boolean get() = stellarShards > 0
+    val quartzVisible: Boolean         get() = drillHeadLevel >= 2
+    val energyVisible: Boolean         get() = powerCoreLevel >= 1 || solarArrayLevel >= 1
+    val titaniumVisible: Boolean       get() = deepShaftLevel >= 1
+    val iridiumVisible: Boolean        get() = deepShaftLevel >= 2
+    val xenonVisible: Boolean          get() = hasAsteroidMiner
+    val stellarShardsVisible: Boolean  get() = stellarShards > 0
 
     fun canAfford(cost: BuildCost): Boolean =
         iron >= cost.iron && quartz >= cost.quartz && titanium >= cost.titanium &&
@@ -74,7 +86,7 @@ data class GameState(
 
     fun applyProduction(seconds: Double): GameState = copy(
         iron     = iron     + ironPerSec     * seconds,
-        quartz   = quartz   + quartzPerSec   * seconds,
+        quartz   = (quartz  + quartzPerSec   * seconds).coerceAtLeast(0.0),
         energy   = energy   + energyPerSec   * seconds,
         titanium = titanium + titaniumPerSec * seconds,
         iridium  = iridium  + iridiumPerSec  * seconds,
@@ -82,23 +94,39 @@ data class GameState(
     )
 }
 
+// ── Costs ─────────────────────────────────────────────────────────────────────
+
 val drillHeadCosts = mapOf(
-    1 to BuildCost(iron =  10.0),
-    2 to BuildCost(iron =   4_000.0),
-    3 to BuildCost(iron =  15_000.0, energy   =   200.0),
-    4 to BuildCost(iron =  80_000.0, titanium = 2_000.0)
+    1 to BuildCost(iron =     10.0),
+    2 to BuildCost(iron =    400.0),
+    3 to BuildCost(iron =  5_000.0, energy   =    80.0),
+    4 to BuildCost(iron = 28_000.0, titanium = 1_000.0)
 )
 val deepShaftCosts = mapOf(
-    1 to BuildCost(iron =  40_000.0),
-    2 to BuildCost(iron = 100_000.0, titanium = 2_000.0)
+    1 to BuildCost(iron =  8_000.0),
+    2 to BuildCost(iron = 40_000.0, titanium = 1_000.0)
 )
-val powerCoreCost      = BuildCost(iron =   3_000.0, quartz   =    600.0)
-val launchSiloCost     = BuildCost(iron =  60_000.0, titanium =  1_500.0)
-val relaySatelliteCost = BuildCost(iron = 200_000.0, titanium =  3_000.0)
-val orbitalLabCost     = BuildCost(iron = 500_000.0, iridium  =  2_000.0)
-val asteroidMinerCost  = BuildCost(iron = 500_000.0, iridium  =  3_000.0)
-val coreTapCost        = BuildCost(xenon =   200.0)
-val planetCoreCost     = BuildCost(xenon = 1_000.0)
+val powerCoreCost          = BuildCost(iron =  1_500.0, quartz   =   200.0)
+val solarArrayCosts        = mapOf(
+    1 to BuildCost(quartz =   800.0),
+    2 to BuildCost(quartz = 2_000.0)
+)
+val launchSiloCostA        = BuildCost(iron = 28_000.0, titanium =   500.0)  // Path A: titanium-heavy
+val launchSiloCostB        = BuildCost(iron = 15_000.0, quartz   = 2_000.0)  // Path B: quartz-slow
+val relaySatelliteCost     = BuildCost(iron = 80_000.0, titanium = 2_000.0)
+val orbitalLabCost         = BuildCost(iridium =  2_000.0)
+val asteroidMinerCost      = BuildCost(iridium = 10_000.0)
+val orbitalSolarStationCost= BuildCost(iridium =  3_000.0)
+val refineryCost           = BuildCost(iron =  3_000.0)
+val coreTapCost            = BuildCost(xenon =    500.0)
+val planetCoreCost         = BuildCost(xenon =  2_000.0)
+
+// Refinery conversion: spend 1 of higher resource, gain downward
+val refineryRates = mapOf(
+    Resource.IRIDIUM  to Pair(BuildCost(iridium  = 1.0), BuildCost(titanium = 3.0)),
+    Resource.TITANIUM to Pair(BuildCost(titanium = 1.0), BuildCost(quartz   = 5.0)),
+    Resource.QUARTZ   to Pair(BuildCost(quartz   = 1.0), BuildCost(iron     = 5.0))
+)
 
 class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val prefs = application.getSharedPreferences("stellar_game", Context.MODE_PRIVATE)
@@ -122,23 +150,26 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         try {
             val s = _state.value
             val json = JSONObject().apply {
-                put("iron",             s.iron)
-                put("quartz",           s.quartz)
-                put("titanium",         s.titanium)
-                put("iridium",          s.iridium)
-                put("xenon",            s.xenon)
-                put("energy",           s.energy)
-                put("stellarShards",    s.stellarShards)
-                put("drillHeadLevel",   s.drillHeadLevel)
-                put("powerCoreLevel",   s.powerCoreLevel)
-                put("deepShaftLevel",   s.deepShaftLevel)
-                put("hasLaunchSilo",    s.hasLaunchSilo)
-                put("hasRelaySatellite",s.hasRelaySatellite)
-                put("hasOrbitalLab",    s.hasOrbitalLab)
-                put("hasAsteroidMiner", s.hasAsteroidMiner)
-                put("hasCoreTap",       s.hasCoreTap)
-                put("hasPlanetCore",    s.hasPlanetCore)
-                put("savedAt",          System.currentTimeMillis())
+                put("iron",                    s.iron)
+                put("quartz",                  s.quartz)
+                put("titanium",                s.titanium)
+                put("iridium",                 s.iridium)
+                put("xenon",                   s.xenon)
+                put("energy",                  s.energy)
+                put("stellarShards",           s.stellarShards)
+                put("drillHeadLevel",          s.drillHeadLevel)
+                put("powerCoreLevel",          s.powerCoreLevel)
+                put("solarArrayLevel",         s.solarArrayLevel)
+                put("deepShaftLevel",          s.deepShaftLevel)
+                put("hasLaunchSilo",           s.hasLaunchSilo)
+                put("hasRelaySatellite",       s.hasRelaySatellite)
+                put("hasOrbitalLab",           s.hasOrbitalLab)
+                put("hasAsteroidMiner",        s.hasAsteroidMiner)
+                put("hasOrbitalSolarStation",  s.hasOrbitalSolarStation)
+                put("hasRefinery",             s.hasRefinery)
+                put("hasCoreTap",              s.hasCoreTap)
+                put("hasPlanetCore",           s.hasPlanetCore)
+                put("savedAt",                 System.currentTimeMillis())
             }.toString()
             prefs.edit().putString("game_state", json).apply()
         } catch (_: Exception) {}
@@ -151,22 +182,25 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             val savedAt = obj.getLong("savedAt")
             val elapsed = min((System.currentTimeMillis() - savedAt) / 1000.0, 8.0 * 3600)
             val s = GameState(
-                iron              = obj.getDouble("iron"),
-                quartz            = obj.getDouble("quartz"),
-                titanium          = obj.getDouble("titanium"),
-                iridium           = obj.getDouble("iridium"),
-                xenon             = obj.getDouble("xenon"),
-                energy            = obj.getDouble("energy"),
-                stellarShards     = obj.getInt("stellarShards"),
-                drillHeadLevel    = obj.getInt("drillHeadLevel"),
-                powerCoreLevel    = obj.getInt("powerCoreLevel"),
-                deepShaftLevel    = obj.getInt("deepShaftLevel"),
-                hasLaunchSilo     = obj.getBoolean("hasLaunchSilo"),
-                hasRelaySatellite = obj.getBoolean("hasRelaySatellite"),
-                hasOrbitalLab     = obj.getBoolean("hasOrbitalLab"),
-                hasAsteroidMiner  = obj.getBoolean("hasAsteroidMiner"),
-                hasCoreTap        = obj.getBoolean("hasCoreTap"),
-                hasPlanetCore     = obj.getBoolean("hasPlanetCore")
+                iron                   = obj.getDouble("iron"),
+                quartz                 = obj.getDouble("quartz"),
+                titanium               = obj.getDouble("titanium"),
+                iridium                = obj.getDouble("iridium"),
+                xenon                  = obj.getDouble("xenon"),
+                energy                 = obj.getDouble("energy"),
+                stellarShards          = obj.getInt("stellarShards"),
+                drillHeadLevel         = obj.getInt("drillHeadLevel"),
+                powerCoreLevel         = obj.getInt("powerCoreLevel"),
+                solarArrayLevel        = obj.optInt("solarArrayLevel", 0),
+                deepShaftLevel         = obj.getInt("deepShaftLevel"),
+                hasLaunchSilo          = obj.getBoolean("hasLaunchSilo"),
+                hasRelaySatellite      = obj.getBoolean("hasRelaySatellite"),
+                hasOrbitalLab          = obj.getBoolean("hasOrbitalLab"),
+                hasAsteroidMiner       = obj.getBoolean("hasAsteroidMiner"),
+                hasOrbitalSolarStation = obj.optBoolean("hasOrbitalSolarStation", false),
+                hasRefinery            = obj.optBoolean("hasRefinery", false),
+                hasCoreTap             = obj.getBoolean("hasCoreTap"),
+                hasPlanetCore          = obj.getBoolean("hasPlanetCore")
             )
             _state.value = if (elapsed > 1) s.applyProduction(elapsed) else s
         } catch (_: Exception) {}
@@ -177,7 +211,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = _state.value.let { s ->
             s.copy(
                 iron     = s.iron     + max(1.0, s.ironPerSec)   * 0.5,
-                quartz   = s.quartz   + s.quartzPerSec           * 0.5,
+                quartz   = (s.quartz  + s.quartzPerSec           * 0.5).coerceAtLeast(0.0),
                 energy   = s.energy   + s.energyPerSec           * 0.5,
                 titanium = s.titanium + s.titaniumPerSec         * 0.5,
                 iridium  = s.iridium  + s.iridiumPerSec          * 0.5,
@@ -191,7 +225,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = _state.value.let { s ->
             when (resource) {
                 Resource.IRON     -> s.copy(iron     = s.iron     + max(1.0, s.ironPerSec)   * 1.5)
-                Resource.QUARTZ   -> s.copy(quartz   = s.quartz   + s.quartzPerSec           * 1.5)
+                Resource.QUARTZ   -> s.copy(quartz   = s.quartz   + s.quartzPerSec.coerceAtLeast(0.0) * 1.5)
                 Resource.ENERGY   -> s.copy(energy   = s.energy   + s.energyPerSec           * 1.5)
                 Resource.TITANIUM -> s.copy(titanium = s.titanium + s.titaniumPerSec         * 1.5)
                 Resource.IRIDIUM  -> s.copy(iridium  = s.iridium  + s.iridiumPerSec          * 1.5)
@@ -215,6 +249,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = s.spend(powerCoreCost).copy(powerCoreLevel = 1)
     }
 
+    fun buySolarArray() {
+        val s = _state.value
+        val next = s.solarArrayLevel + 1
+        if (next > 2 || s.drillHeadLevel < 2) return
+        val cost = solarArrayCosts[next] ?: return
+        if (!s.canAfford(cost)) return
+        _state.value = s.spend(cost).copy(solarArrayLevel = next)
+    }
+
     fun buyDeepShaft() {
         val s = _state.value
         val next = s.deepShaftLevel + 1
@@ -224,11 +267,25 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = s.spend(cost).copy(deepShaftLevel = next)
     }
 
-    fun buyLaunchSilo() {
+    fun buyRefinery() {
         val s = _state.value
-        if (s.hasLaunchSilo || s.deepShaftLevel < 1) return
-        if (!s.canAfford(launchSiloCost)) return
-        _state.value = s.spend(launchSiloCost).copy(hasLaunchSilo = true)
+        if (s.hasRefinery || s.drillHeadLevel < 3) return
+        if (!s.canAfford(refineryCost)) return
+        _state.value = s.spend(refineryCost).copy(hasRefinery = true)
+    }
+
+    fun buyLaunchSiloA() {
+        val s = _state.value
+        if (s.hasLaunchSilo || s.drillHeadLevel < 3 || s.deepShaftLevel < 1) return
+        if (!s.canAfford(launchSiloCostA)) return
+        _state.value = s.spend(launchSiloCostA).copy(hasLaunchSilo = true)
+    }
+
+    fun buyLaunchSiloB() {
+        val s = _state.value
+        if (s.hasLaunchSilo || s.drillHeadLevel < 3) return
+        if (!s.canAfford(launchSiloCostB)) return
+        _state.value = s.spend(launchSiloCostB).copy(hasLaunchSilo = true)
     }
 
     fun buyRelaySatellite() {
@@ -252,6 +309,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = s.spend(asteroidMinerCost).copy(hasAsteroidMiner = true)
     }
 
+    fun buyOrbitalSolarStation() {
+        val s = _state.value
+        if (s.hasOrbitalSolarStation || !s.hasOrbitalLab || s.solarArrayLevel < 2) return
+        if (!s.canAfford(orbitalSolarStationCost)) return
+        _state.value = s.spend(orbitalSolarStationCost).copy(hasOrbitalSolarStation = true)
+    }
+
     fun buyCoreTap() {
         val s = _state.value
         if (s.hasCoreTap || s.drillHeadLevel < 4) return
@@ -271,6 +335,20 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (!s.hasPlanetCore) return
         _state.value = GameState(stellarShards = s.stellarShards + 1)
         saveState()
+    }
+
+    // Refinery: convert 1 unit of a resource downward in the chain
+    fun refineryConvert(from: Resource) {
+        val s = _state.value
+        if (!s.hasRefinery) return
+        val (cost, gain) = refineryRates[from] ?: return
+        if (!s.canAfford(cost)) return
+        _state.value = s.spend(cost).copy(
+            iron     = s.iron     - cost.iron     + gain.iron,
+            quartz   = s.quartz   - cost.quartz   + gain.quartz,
+            titanium = s.titanium - cost.titanium + gain.titanium,
+            iridium  = s.iridium  - cost.iridium  + gain.iridium
+        )
     }
 
     fun hardReset() {
