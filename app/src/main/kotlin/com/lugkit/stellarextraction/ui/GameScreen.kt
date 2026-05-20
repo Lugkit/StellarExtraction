@@ -553,7 +553,7 @@ private fun FlybyOverlay() {
     var flybyRtL      by remember { mutableStateOf(false) }  // right-to-left?
 
     LaunchedEffect(Unit) {
-        delay((3_000L..90_000L).random())
+        delay((8_000L..90_000L).random())
         while (true) {
             flybyType  = (0..1).random()
             flybyYFrac = kotlin.random.Random.nextFloat() * (0.52f - 0.28f) + 0.28f

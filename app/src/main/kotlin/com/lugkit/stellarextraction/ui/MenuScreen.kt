@@ -50,11 +50,17 @@ fun ShopTab(
             val next = state.drillHeadLevel + 1
             val cost = drillHeadCosts[next]!!
             val prod = when (next) { 1 -> "1"; 2 -> "3"; 3 -> "9"; else -> "27" }
+            val (cardName, levelLabel) = when (next) {
+                1    -> "DRILLING RIG"    to "BUILD"
+                2    -> "DRILL HEAD LV.1" to "BUILD"
+                3    -> "DRILL HEAD LV.2" to "LV.1 → LV.2"
+                else -> "DRILL HEAD LV.3" to "LV.2 → LV.3"
+            }
             SectionLabel("MINING")
             UpgradeCard(
-                name        = "DRILL HEAD",
+                name        = cardName,
                 description = "$prod iron/sec",
-                levelLabel  = "LVL ${state.drillHeadLevel} → $next",
+                levelLabel  = levelLabel,
                 cost        = cost,
                 state       = state,
                 onClick     = onBuyDrillHead
@@ -67,7 +73,7 @@ fun ShopTab(
 
             if (state.powerCoreLevel < 1) {
                 UpgradeCard(
-                    name        = "POWER CORE",
+                    name        = "POWER GENERATOR",
                     description = "3 energy/sec  •  upkeep: 1 quartz/sec",
                     levelLabel  = "BUILD",
                     cost        = state.effectivePowerCoreCost(),
@@ -96,7 +102,7 @@ fun ShopTab(
             SectionLabel("DEEP MINING")
             if (state.deepShaftLevel < 1) {
                 UpgradeCard(
-                    name        = "DEEP SHAFT",
+                    name        = "DEEP MINES",
                     description = "0.5 titanium/sec",
                     levelLabel  = "BUILD",
                     cost        = deepShaftCosts[1]!!,
@@ -105,7 +111,7 @@ fun ShopTab(
                 )
             } else if (state.drillHeadLevel >= 4) {
                 UpgradeCard(
-                    name        = "DEEP SHAFT LV.2",
+                    name        = "DEEPER MINES",
                     description = "0.15 iridium/sec",
                     levelLabel  = "UPGRADE",
                     cost        = deepShaftCosts[2]!!,
@@ -353,51 +359,46 @@ fun TreeTab(state: GameState) {
         // ── BOOT ──────────────────────────────────────────────────────────────
         TNode("PICKAXE", "Manual strike mining", "ACTIVE", true)
         TVLine(true)
-        TNode("DRILL HEAD LV.1", "1 iron/sec", "BUY IN SHOP", state.drillHeadLevel >= 1)
+        TNode("DRILLING RIG", "1 iron/sec", "BUY IN SHOP", state.drillHeadLevel >= 1)
         TVLine(state.drillHeadLevel >= 1)
-        TNode("DRILL HEAD LV.2", "3 iron/sec  +  quartz", "NEED DRILL LV.1", state.drillHeadLevel >= 2)
-
-        // ── ENERGY BRANCH (build either or both) ──────────────────────────────
-        TSectionHeader("ENERGY GRID  —  build any combination")
+        TNode("DRILL HEAD LV.1", "3 iron/sec  +  quartz", "NEED DRILLING RIG", state.drillHeadLevel >= 2)
+        TVLine(state.drillHeadLevel >= 2)
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            TBranchNode("POWER CORE", "3 energy/sec\nupkeep: 1 quartz/sec", "NEED DRILL LV.2", state.powerCoreLevel >= 1, Modifier.weight(1f))
+            TBranchNode("POWER GENERATOR", "3 energy/sec\nupkeep: 1 quartz/sec", "NEED DRILL LV.1", state.powerCoreLevel >= 1, Modifier.weight(1f))
             Text("AND\n/OR", color = AsteroidsGreen.copy(alpha = 0.3f), fontFamily = AsteroidsFont, fontSize = 8.sp,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 modifier = Modifier.align(Alignment.CenterVertically))
             Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                TBranchNode("SOLAR ARRAY LV.1", "1 energy/sec\nno upkeep", "NEED POWER CORE", state.solarArrayLevel >= 1, Modifier.fillMaxWidth())
+                TBranchNode("SOLAR ARRAY LV.1", "1 energy/sec\nno upkeep", "NEED POWER GEN", state.solarArrayLevel >= 1, Modifier.fillMaxWidth())
                 TVLine(state.solarArrayLevel >= 1)
                 TBranchNode("SOLAR ARRAY LV.2", "2 energy/sec\nno upkeep", "NEED SOLAR LV.1", state.solarArrayLevel >= 2, Modifier.fillMaxWidth())
             }
         }
 
         TVLine(state.drillHeadLevel >= 2)
-        TNode("DRILL HEAD LV.3", "9 iron/sec", "NEED DRILL LV.2 + 80 energy", state.drillHeadLevel >= 3)
+        TNode("DRILL HEAD LV.2", "9 iron/sec", "NEED DRILL LV.1 + 80 energy", state.drillHeadLevel >= 3)
         TVLine(state.drillHeadLevel >= 3)
-        TNode("DEEP SHAFT", "0.5 titanium/sec", "NEED DRILL LV.3", state.deepShaftLevel >= 1)
+        TNode("DEEP MINES", "0.5 titanium/sec", "NEED DRILL LV.2", state.deepShaftLevel >= 1)
 
-        // ── OPTIONAL SIDEGRADE ────────────────────────────────────────────────
         Spacer(Modifier.height(6.dp))
-        TOptional("REFINERY", "Convert resources downward", "NEED DRILL LV.3", state.hasRefinery)
+        TOptional("REFINERY", "Convert resources downward", "NEED DRILL LV.2", state.hasRefinery)
         Spacer(Modifier.height(6.dp))
-
-        // ── LAUNCH SILO — choose one path ─────────────────────────────────────
-        TSectionHeader("LAUNCH SILO  —  choose one path")
+        TVLine(state.deepShaftLevel >= 1)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                TBranchNode("PATH A", "28K iron\n+ 500 titanium\nfaster, needs deep shaft", "NEED DEEP SHAFT", state.hasLaunchSilo, Modifier.fillMaxWidth())
+                TBranchNode("SILO", "15K iron\n+ 2K quartz\nno titanium needed", "NEED DRILL LV.2", state.hasLaunchSilo, Modifier.fillMaxWidth())
             }
             Text("OR", color = AsteroidsGreen.copy(alpha = 0.3f), fontFamily = AsteroidsFont, fontSize = 8.sp,
                 modifier = Modifier.align(Alignment.CenterVertically))
             Column(modifier = Modifier.weight(1f)) {
-                TBranchNode("PATH B", "15K iron\n+ 2K quartz\nno titanium needed", "NEED DRILL LV.3", state.hasLaunchSilo, Modifier.fillMaxWidth())
+                TBranchNode("POSH SILO", "28K iron\n+ 500 titanium\nneeds deep mines", "NEED DEEP MINES", state.hasLaunchSilo, Modifier.fillMaxWidth())
             }
         }
 
@@ -405,9 +406,7 @@ fun TreeTab(state: GameState) {
         TNode("RELAY SATELLITE", "Orbital communications", "NEED LAUNCH SILO", state.hasRelaySatellite)
         TVLine(state.hasRelaySatellite)
         TNode("ORBITAL LAB", "Advanced research", "NEED RELAY + 2K iridium", state.hasOrbitalLab)
-
-        // ── ORBITAL BRANCH (build either or both) ─────────────────────────────
-        TSectionHeader("ORBITAL  —  build either or both")
+        TVLine(state.hasOrbitalLab)
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top,
@@ -420,13 +419,12 @@ fun TreeTab(state: GameState) {
             TBranchNode("ORBITAL SOLAR", "20 energy/sec\nno upkeep\nneeds Solar LV.2", "NEED LAB\n+ SOLAR LV.2", state.hasOrbitalSolarStation, Modifier.weight(1f))
         }
 
-        // ── CORE PATH ─────────────────────────────────────────────────────────
-        TSectionHeader("CORE PATH  —  requires Drill LV.4 + xenon")
-        TNode("DRILL HEAD LV.4", "27 iron/sec", "NEED DRILL LV.3 + 1K titan", state.drillHeadLevel >= 4)
+        TVLine(state.drillHeadLevel >= 3)
+        TNode("DRILL HEAD LV.3", "27 iron/sec", "NEED DRILL LV.2 + 1K titan", state.drillHeadLevel >= 4)
         TVLine(state.drillHeadLevel >= 4)
-        TNode("DEEP SHAFT LV.2", "0.15 iridium/sec", "NEED DRILL LV.4", state.deepShaftLevel >= 2)
+        TNode("DEEPER MINES", "0.15 iridium/sec", "NEED DRILL LV.3", state.deepShaftLevel >= 2)
         TVLine(state.hasAsteroidMiner)
-        TNode("CORE TAP", "500 xenon to build", "NEED DRILL LV.4 + xenon", state.hasCoreTap)
+        TNode("CORE TAP", "500 xenon to build", "NEED DRILL LV.3 + xenon", state.hasCoreTap)
         TVLine(state.hasCoreTap)
         TNode("PLANET CORE", "2K xenon to build", "NEED CORE TAP", state.hasPlanetCore)
         TVLine(state.hasPlanetCore)
