@@ -207,6 +207,10 @@ private fun ShopContent(vm: GameViewModel) {
             ShopTab(
                 state                    = state,
                 onBuyDrillHead           = vm::buyDrillHead,
+                onBuyQuartzVein          = vm::buyQuartzVein,
+                onBuyTitaniumShaft       = vm::buyTitaniumShaft,
+                onBuyIridiumDeposit      = vm::buyIridiumDeposit,
+                onBuyXenonExtractor      = vm::buyXenonExtractor,
                 onBuyPowerCore           = vm::buyPowerCore,
                 onBuySolarArray          = vm::buySolarArray,
                 onBuyDeepShaft           = vm::buyDeepShaft,
@@ -219,6 +223,7 @@ private fun ShopContent(vm: GameViewModel) {
                 onBuyOrbitalSolarStation = vm::buyOrbitalSolarStation,
                 onBuyCoreTap             = vm::buyCoreTap,
                 onBuyPlanetCore          = vm::buyPlanetCore,
+                onBuyOrbitalBeacon       = vm::buyOrbitalBeacon,
                 onAscend                 = vm::ascend,
                 onRefineryConvert        = vm::refineryConvert
             )

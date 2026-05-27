@@ -77,7 +77,15 @@ data class GameState(
     val hasRefinery: Boolean = false,
     val hasCoreTap: Boolean = false,
     val hasPlanetCore: Boolean = false,
+    val hasOrbitalBeacon: Boolean = false,
+    val beaconCompleteAt: Long = 0L,
     val buildingSeed: Long = 12345L,
+
+    // ── Continuous mine levels (reset on ascension) ───────────────────────────
+    val quartzVeinLevel: Int = 0,
+    val titaniumShaftLevel: Int = 0,
+    val iridiumDepositLevel: Int = 0,
+    val xenonExtractorLevel: Int = 0,
 
     // ── Ascension upgrades (persist across runs) ──────────────────────────────
     val strikeYieldLevel: Int = 0,
@@ -96,12 +104,14 @@ data class GameState(
     val resonanceLevel: Int = 0
 ) {
     // ── Production rates (with ascension bonuses) ─────────────────────────────
-    val ironPerSec: Double get() {
-        val base = when (drillHeadLevel) { 1->1.0; 2->3.0; 3->9.0; 4->27.0; else->0.0 }
-        return base * (1 + ascBonus(drillSpeedLevel))
+    val ironPerSec: Double get() =
+        drillHeadIronRate(drillHeadLevel) * (1 + ascBonus(drillSpeedLevel))
+
+    val quartzBasePerSec: Double get() {
+        val fromDrill = if (drillHeadLevel >= 2) 1.5 * (1 + ascBonus(quartzRichnessLevel)) else 0.0
+        val fromVein  = quartzVeinQuartzRate(quartzVeinLevel) * (1 + ascBonus(quartzRichnessLevel))
+        return fromDrill + fromVein
     }
-    val quartzBasePerSec: Double get() =
-        if (drillHeadLevel >= 2) 1.5 * (1 + ascBonus(quartzRichnessLevel)) else 0.0
     val quartzUpkeep: Double     get() = if (powerCoreLevel >= 1) 1.0 else 0.0
     val quartzPerSec: Double     get() = quartzBasePerSec - quartzUpkeep
 
@@ -111,16 +121,21 @@ data class GameState(
         (if (powerCoreLevel >= 1) 3.0 else 0.0) + solarPerSec +
         (if (hasOrbitalSolarStation) 20.0 else 0.0)
 
-    val titaniumPerSec: Double get() =
-        if (deepShaftLevel >= 1)
-            0.5 * (1 + ascBonus(deepShaftSpeedLevel)) * (1 + ascBonus(titaniumDensityLevel))
-        else 0.0
-    val iridiumPerSec: Double get() =
-        if (deepShaftLevel >= 2)
-            0.15 * (1 + ascBonus(deepShaftSpeedLevel)) * (1 + ascBonus(iridiumConcentrationLevel)) * (1 + ascBonus(orbitalLabResearchLevel))
-        else 0.0
-    val xenonPerSec: Double get() =
-        if (hasAsteroidMiner) 0.05 * (1 + ascBonus(satelliteUplinkLevel)) else 0.0
+    val titaniumPerSec: Double get() {
+        val fromShaft = if (deepShaftLevel >= 1) 0.5 * (1 + ascBonus(deepShaftSpeedLevel)) * (1 + ascBonus(titaniumDensityLevel)) else 0.0
+        val fromMine  = titaniumShaftTitaniumRate(titaniumShaftLevel) * (1 + ascBonus(titaniumDensityLevel))
+        return fromShaft + fromMine
+    }
+    val iridiumPerSec: Double get() {
+        val fromShaft   = if (deepShaftLevel >= 2) 0.15 * (1 + ascBonus(deepShaftSpeedLevel)) * (1 + ascBonus(iridiumConcentrationLevel)) * (1 + ascBonus(orbitalLabResearchLevel)) else 0.0
+        val fromDeposit = iridiumDepositIridiumRate(iridiumDepositLevel) * (1 + ascBonus(iridiumConcentrationLevel))
+        return fromShaft + fromDeposit
+    }
+    val xenonPerSec: Double get() {
+        val fromMiner     = if (hasAsteroidMiner) 0.05 * (1 + ascBonus(satelliteUplinkLevel)) else 0.0
+        val fromExtractor = xenonExtractorXenonRate(xenonExtractorLevel) * (1 + ascBonus(satelliteUplinkLevel))
+        return fromMiner + fromExtractor
+    }
 
     // ── Visibility ────────────────────────────────────────────────────────────
     val quartzVisible: Boolean        get() = drillHeadLevel >= 2
@@ -188,12 +203,38 @@ data class GameState(
 
 // ── Costs ─────────────────────────────────────────────────────────────────────
 
-val drillHeadCosts = mapOf(
-    1 to BuildCost(iron =     10.0),
-    2 to BuildCost(iron =    400.0),
-    3 to BuildCost(iron =  5_000.0, energy   =    80.0),
-    4 to BuildCost(iron = 28_000.0, titanium = 1_000.0)
+// ── Orbital Beacon config (placeholder — adjust after playtesting) ────────────
+const val BEACON_BASE_TIME      = 7200L   // seconds (2 hours)
+const val BEACON_TIME_INCREMENT = 3600L   // extra seconds per stellar shard (1 hour)
+val orbitalBeaconCost = BuildCost(
+    iron     = 500_000.0,
+    quartz   =  50_000.0,
+    titanium =  10_000.0,
+    iridium  =  25_000.0,
+    xenon    =   5_000.0
 )
+fun beaconBuildSeconds(stellarShards: Int): Long =
+    BEACON_BASE_TIME + stellarShards.toLong() * BEACON_TIME_INCREMENT
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Continuous mine helpers ───────────────────────────────────────────────────
+
+private const val MINE_SCALE = 1.15
+
+fun drillHeadNextCost(level: Int)         = BuildCost(iron = 10.0 * Math.pow(MINE_SCALE, level.toDouble()))
+fun quartzVeinNextCost(level: Int)        = BuildCost(iron = 200.0 * Math.pow(MINE_SCALE, level.toDouble()), quartz = 50.0 * Math.pow(MINE_SCALE, level.toDouble()))
+fun titaniumShaftNextCost(level: Int)     = BuildCost(iron = 1_000.0 * Math.pow(MINE_SCALE, level.toDouble()), quartz = 200.0 * Math.pow(MINE_SCALE, level.toDouble()))
+fun iridiumDepositNextCost(level: Int)    = BuildCost(iron = 5_000.0 * Math.pow(MINE_SCALE, level.toDouble()), titanium = 500.0 * Math.pow(MINE_SCALE, level.toDouble()))
+fun xenonExtractorNextCost(level: Int)    = BuildCost(iridium = 2_000.0 * Math.pow(MINE_SCALE, level.toDouble()), xenon = 200.0 * Math.pow(MINE_SCALE, level.toDouble()))
+
+fun drillHeadIronRate(level: Int)         = if (level == 0) 0.0 else 1.0 * Math.pow(MINE_SCALE, level.toDouble())
+fun quartzVeinQuartzRate(level: Int)      = if (level == 0) 0.0 else 0.5 * Math.pow(MINE_SCALE, level.toDouble())
+fun titaniumShaftTitaniumRate(level: Int) = if (level == 0) 0.0 else 0.3 * Math.pow(MINE_SCALE, level.toDouble())
+fun iridiumDepositIridiumRate(level: Int) = if (level == 0) 0.0 else 0.2 * Math.pow(MINE_SCALE, level.toDouble())
+fun xenonExtractorXenonRate(level: Int)   = if (level == 0) 0.0 else 0.1 * Math.pow(MINE_SCALE, level.toDouble())
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 val deepShaftCosts = mapOf(
     1 to BuildCost(iron =  8_000.0),
     2 to BuildCost(iron = 40_000.0, titanium = 1_000.0)
@@ -230,7 +271,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             var tick = 0
             while (true) {
                 delay(1000)
-                _state.value = _state.value.applyProduction(1.0)
+                _state.value = _state.value.applyProduction(1.0).let { s ->
+                    if (!s.hasOrbitalBeacon && s.beaconCompleteAt > 0L && System.currentTimeMillis() >= s.beaconCompleteAt)
+                        s.copy(hasOrbitalBeacon = true, beaconCompleteAt = 0L)
+                    else s
+                }
                 if (++tick % 30 == 0) saveState()
             }
         }
@@ -255,7 +300,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 put("hasRefinery", s.hasRefinery)
                 put("hasCoreTap", s.hasCoreTap)
                 put("hasPlanetCore", s.hasPlanetCore)
+                put("hasOrbitalBeacon", s.hasOrbitalBeacon)
+                put("beaconCompleteAt", s.beaconCompleteAt)
                 put("buildingSeed", s.buildingSeed)
+                put("quartzVeinLevel", s.quartzVeinLevel)
+                put("titaniumShaftLevel", s.titaniumShaftLevel)
+                put("iridiumDepositLevel", s.iridiumDepositLevel)
+                put("xenonExtractorLevel", s.xenonExtractorLevel)
                 // Ascension upgrades
                 put("asc_strikeYield", s.strikeYieldLevel)
                 put("asc_drillSpeed", s.drillSpeedLevel)
@@ -303,7 +354,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 hasRefinery            = obj.optBoolean("hasRefinery", false),
                 hasCoreTap             = obj.getBoolean("hasCoreTap"),
                 hasPlanetCore          = obj.getBoolean("hasPlanetCore"),
-                buildingSeed           = obj.optLong("buildingSeed", 12345L),
+                hasOrbitalBeacon       = obj.optBoolean("hasOrbitalBeacon", false),
+                beaconCompleteAt       = obj.optLong("beaconCompleteAt", 0L),
+                buildingSeed            = obj.optLong("buildingSeed", 12345L),
+                quartzVeinLevel         = obj.optInt("quartzVeinLevel", 0),
+                titaniumShaftLevel      = obj.optInt("titaniumShaftLevel", 0),
+                iridiumDepositLevel     = obj.optInt("iridiumDepositLevel", 0),
+                xenonExtractorLevel     = obj.optInt("xenonExtractorLevel", 0),
                 // Ascension upgrades
                 strikeYieldLevel          = obj.optInt("asc_strikeYield", 0),
                 drillSpeedLevel           = obj.optInt("asc_drillSpeed", 0),
@@ -320,7 +377,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 headStartLevel            = obj.optInt("asc_headStart", 0),
                 resonanceLevel            = obj.optInt("asc_resonance", 0)
             )
-            _state.value = if (elapsed > 1) s.applyProduction(elapsed) else s
+            val withProd = if (elapsed > 1) s.applyProduction(elapsed) else s
+            _state.value = if (!withProd.hasOrbitalBeacon && withProd.beaconCompleteAt > 0L && System.currentTimeMillis() >= withProd.beaconCompleteAt)
+                withProd.copy(hasOrbitalBeacon = true, beaconCompleteAt = 0L)
+            else withProd
         } catch (_: Exception) {}
     }
 
@@ -358,10 +418,41 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun buyDrillHead() {
         val s = _state.value
-        val next = s.drillHeadLevel + 1
-        val cost = drillHeadCosts[next] ?: return
+        val cost = drillHeadNextCost(s.drillHeadLevel)
         if (!s.canAfford(cost)) return
-        _state.value = s.spend(cost).copy(drillHeadLevel = next)
+        _state.value = s.spend(cost).copy(drillHeadLevel = s.drillHeadLevel + 1)
+    }
+
+    fun buyQuartzVein() {
+        val s = _state.value
+        if (s.drillHeadLevel < 2) return
+        val cost = quartzVeinNextCost(s.quartzVeinLevel)
+        if (!s.canAfford(cost)) return
+        _state.value = s.spend(cost).copy(quartzVeinLevel = s.quartzVeinLevel + 1)
+    }
+
+    fun buyTitaniumShaft() {
+        val s = _state.value
+        if (s.deepShaftLevel < 1) return
+        val cost = titaniumShaftNextCost(s.titaniumShaftLevel)
+        if (!s.canAfford(cost)) return
+        _state.value = s.spend(cost).copy(titaniumShaftLevel = s.titaniumShaftLevel + 1)
+    }
+
+    fun buyIridiumDeposit() {
+        val s = _state.value
+        if (s.deepShaftLevel < 2) return
+        val cost = iridiumDepositNextCost(s.iridiumDepositLevel)
+        if (!s.canAfford(cost)) return
+        _state.value = s.spend(cost).copy(iridiumDepositLevel = s.iridiumDepositLevel + 1)
+    }
+
+    fun buyXenonExtractor() {
+        val s = _state.value
+        if (!s.hasAsteroidMiner) return
+        val cost = xenonExtractorNextCost(s.xenonExtractorLevel)
+        if (!s.canAfford(cost)) return
+        _state.value = s.spend(cost).copy(xenonExtractorLevel = s.xenonExtractorLevel + 1)
     }
 
     fun buyPowerCore() {
@@ -456,9 +547,18 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = s.spend(planetCoreCost).copy(hasPlanetCore = true)
     }
 
+    fun buyOrbitalBeacon() {
+        val s = _state.value
+        if (s.hasOrbitalBeacon || s.beaconCompleteAt > 0L) return
+        if (!s.hasPlanetCore || !s.hasOrbitalLab) return
+        if (!s.canAfford(orbitalBeaconCost)) return
+        val completeAt = System.currentTimeMillis() + beaconBuildSeconds(s.stellarShards) * 1000L
+        _state.value = s.spend(orbitalBeaconCost).copy(beaconCompleteAt = completeAt)
+    }
+
     fun ascend() {
         val s = _state.value
-        if (!s.hasPlanetCore) return
+        if (!s.hasPlanetCore || !s.hasOrbitalBeacon) return
         val headStart = when (s.headStartLevel) {
             1 -> 500.0; 2 -> 2_000.0; 3 -> 8_000.0; 4 -> 32_000.0; else -> 0.0
         }

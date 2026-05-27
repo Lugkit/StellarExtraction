@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -23,6 +24,10 @@ import com.lugkit.stellarextraction.*
 fun ShopTab(
     state: GameState,
     onBuyDrillHead: () -> Unit,
+    onBuyQuartzVein: () -> Unit,
+    onBuyTitaniumShaft: () -> Unit,
+    onBuyIridiumDeposit: () -> Unit,
+    onBuyXenonExtractor: () -> Unit,
     onBuyPowerCore: () -> Unit,
     onBuySolarArray: () -> Unit,
     onBuyDeepShaft: () -> Unit,
@@ -35,6 +40,7 @@ fun ShopTab(
     onBuyOrbitalSolarStation: () -> Unit,
     onBuyCoreTap: () -> Unit,
     onBuyPlanetCore: () -> Unit,
+    onBuyOrbitalBeacon: () -> Unit,
     onAscend: () -> Unit,
     onRefineryConvert: (Resource) -> Unit
 ) {
@@ -46,24 +52,25 @@ fun ShopTab(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         // ── MINING ────────────────────────────────────────────────────────────
-        if (state.drillHeadLevel < 4) {
-            val next = state.drillHeadLevel + 1
-            val cost = drillHeadCosts[next]!!
-            val prod = when (next) { 1 -> "1"; 2 -> "3"; 3 -> "9"; else -> "27" }
-            val (cardName, levelLabel) = when (next) {
-                1    -> "DRILLING RIG"    to "BUILD"
-                2    -> "DRILL HEAD LV.1" to "BUILD"
-                3    -> "DRILL HEAD LV.2" to "LV.1 → LV.2"
-                else -> "DRILL HEAD LV.3" to "LV.2 → LV.3"
-            }
-            SectionLabel("MINING")
-            UpgradeCard(
-                name        = cardName,
-                description = "$prod iron/sec",
-                levelLabel  = levelLabel,
-                cost        = cost,
-                state       = state,
-                onClick     = onBuyDrillHead
+        SectionLabel("MINING")
+        MineUpgradeCard(
+            name             = "DRILL HEAD",
+            resourceLabel    = "iron",
+            level            = state.drillHeadLevel,
+            productionPerSec = state.ironPerSec,
+            nextLevelCost    = drillHeadNextCost(state.drillHeadLevel),
+            state            = state,
+            onClick          = onBuyDrillHead
+        )
+        if (state.drillHeadLevel >= 2) {
+            MineUpgradeCard(
+                name             = "QUARTZ VEIN",
+                resourceLabel    = "quartz",
+                level            = state.quartzVeinLevel,
+                productionPerSec = quartzVeinQuartzRate(state.quartzVeinLevel),
+                nextLevelCost    = quartzVeinNextCost(state.quartzVeinLevel),
+                state            = state,
+                onClick          = onBuyQuartzVein
             )
         }
 
@@ -98,9 +105,9 @@ fun ShopTab(
         }
 
         // ── DEEP MINING ───────────────────────────────────────────────────────
-        if (state.drillHeadLevel >= 3 && state.deepShaftLevel < 2) {
+        if (state.drillHeadLevel >= 3 || state.deepShaftLevel >= 1) {
             SectionLabel("DEEP MINING")
-            if (state.deepShaftLevel < 1) {
+            if (state.drillHeadLevel >= 3 && state.deepShaftLevel < 1) {
                 UpgradeCard(
                     name        = "DEEP MINES",
                     description = "0.5 titanium/sec",
@@ -109,7 +116,8 @@ fun ShopTab(
                     state       = state,
                     onClick     = onBuyDeepShaft
                 )
-            } else if (state.drillHeadLevel >= 4) {
+            }
+            if (state.deepShaftLevel >= 1 && state.deepShaftLevel < 2 && state.drillHeadLevel >= 4) {
                 UpgradeCard(
                     name        = "DEEPER MINES",
                     description = "0.15 iridium/sec",
@@ -117,6 +125,28 @@ fun ShopTab(
                     cost        = deepShaftCosts[2]!!,
                     state       = state,
                     onClick     = onBuyDeepShaft
+                )
+            }
+            if (state.deepShaftLevel >= 1) {
+                MineUpgradeCard(
+                    name             = "TITANIUM SHAFT",
+                    resourceLabel    = "titanium",
+                    level            = state.titaniumShaftLevel,
+                    productionPerSec = titaniumShaftTitaniumRate(state.titaniumShaftLevel),
+                    nextLevelCost    = titaniumShaftNextCost(state.titaniumShaftLevel),
+                    state            = state,
+                    onClick          = onBuyTitaniumShaft
+                )
+            }
+            if (state.deepShaftLevel >= 2) {
+                MineUpgradeCard(
+                    name             = "IRIDIUM DEPOSIT",
+                    resourceLabel    = "iridium",
+                    level            = state.iridiumDepositLevel,
+                    productionPerSec = iridiumDepositIridiumRate(state.iridiumDepositLevel),
+                    nextLevelCost    = iridiumDepositNextCost(state.iridiumDepositLevel),
+                    state            = state,
+                    onClick          = onBuyIridiumDeposit
                 )
             }
         }
@@ -138,7 +168,8 @@ fun ShopTab(
         val anyOrbital = (!state.hasLaunchSilo && state.drillHeadLevel >= 3) ||
             (!state.hasRelaySatellite && state.hasLaunchSilo) ||
             (!state.hasOrbitalLab && state.hasRelaySatellite) ||
-            (!state.hasAsteroidMiner && state.hasOrbitalLab)
+            (!state.hasAsteroidMiner && state.hasOrbitalLab) ||
+            state.hasAsteroidMiner
         if (anyOrbital) SectionLabel("ORBITAL")
 
         if (!state.hasLaunchSilo && state.drillHeadLevel >= 3) {
@@ -194,6 +225,17 @@ fun ShopTab(
                 onClick     = onBuyAsteroidMiner
             )
         }
+        if (state.hasAsteroidMiner) {
+            MineUpgradeCard(
+                name             = "XENON EXTRACTOR",
+                resourceLabel    = "xenon",
+                level            = state.xenonExtractorLevel,
+                productionPerSec = xenonExtractorXenonRate(state.xenonExtractorLevel),
+                nextLevelCost    = xenonExtractorNextCost(state.xenonExtractorLevel),
+                state            = state,
+                onClick          = onBuyXenonExtractor
+            )
+        }
 
         if (!state.hasOrbitalSolarStation && state.hasOrbitalLab && state.solarArrayLevel >= 2) {
             SectionLabel("ENERGY")
@@ -233,16 +275,20 @@ fun ShopTab(
         }
 
         // ── PRESTIGE ──────────────────────────────────────────────────────────
-        if (state.hasPlanetCore) {
+        if (state.hasPlanetCore && state.hasOrbitalLab) {
             SectionLabel("PRESTIGE")
-            UpgradeCard(
-                name        = "ASCEND",
-                description = "Reset all — earn 1 Stellar Shard",
-                levelLabel  = "PRESTIGE",
-                cost        = null,
-                state       = state,
-                onClick     = onAscend
-            )
+            if (!state.hasOrbitalBeacon) {
+                OrbitalBeaconCard(state = state, onBuy = onBuyOrbitalBeacon)
+            } else {
+                UpgradeCard(
+                    name        = "ASCEND",
+                    description = "Reset all — earn 1 Stellar Shard",
+                    levelLabel  = "PRESTIGE",
+                    cost        = null,
+                    state       = state,
+                    onClick     = onAscend
+                )
+            }
         }
     }
 }
@@ -292,6 +338,98 @@ fun UpgradeCard(
             Text("COST  free", color = AsteroidsGreen.copy(alpha = 0.85f), fontFamily = AsteroidsFont, fontSize = 12.sp)
         }
     }
+}
+
+@Composable
+private fun MineUpgradeCard(
+    name: String,
+    resourceLabel: String,
+    level: Int,
+    productionPerSec: Double,
+    nextLevelCost: BuildCost,
+    state: GameState,
+    onClick: () -> Unit
+) {
+    val canAfford = state.canAfford(nextLevelCost)
+    val borderColor = if (canAfford) AsteroidsGreen else AsteroidsGreen.copy(alpha = 0.2f)
+    val progress = (1f - 1f / (1f + level * 0.04f)).coerceIn(0f, 1f)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, borderColor, RoundedCornerShape(2.dp))
+            .clickable(enabled = canAfford) { onClick() }
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(name, color = borderColor, fontFamily = AsteroidsFont, fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 1.sp)
+            Text(if (level == 0) "BUILD" else "LV.$level", color = borderColor.copy(alpha = 0.7f), fontFamily = AsteroidsFont, fontSize = 11.sp)
+        }
+        val rateStr = if (productionPerSec > 0) formatRate(productionPerSec) else "0"
+        Text("$rateStr $resourceLabel/sec", color = borderColor.copy(alpha = 0.55f), fontFamily = AsteroidsFont, fontSize = 11.sp)
+        CostDisplay(cost = nextLevelCost, state = state)
+        Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(AsteroidsGreen.copy(alpha = 0.08f))) {
+            if (progress > 0f) {
+                Box(modifier = Modifier.fillMaxWidth(fraction = progress).height(2.dp).background(AsteroidsGreen.copy(alpha = 0.28f)))
+            }
+        }
+    }
+}
+
+@Composable
+private fun OrbitalBeaconCard(state: GameState, onBuy: () -> Unit) {
+    val buildSecs = beaconBuildSeconds(state.stellarShards)
+    val isBuilding = state.beaconCompleteAt > 0L && !state.hasOrbitalBeacon
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+
+    LaunchedEffect(isBuilding) {
+        if (isBuilding) {
+            while (true) { delay(1000L); now = System.currentTimeMillis() }
+        }
+    }
+
+    if (!isBuilding) {
+        UpgradeCard(
+            name        = "ORBITAL BEACON",
+            description = "Required for ascension  •  ${formatDuration(buildSecs)} build time",
+            levelLabel  = "BUILD",
+            cost        = orbitalBeaconCost,
+            state       = state,
+            onClick     = onBuy
+        )
+    } else {
+        val remainingSecs = ((state.beaconCompleteAt - now) / 1000L).coerceAtLeast(0L)
+        val progress = (1f - remainingSecs.toFloat() / buildSecs.toFloat()).coerceIn(0f, 1f)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, AsteroidsGreen, RoundedCornerShape(2.dp))
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("ORBITAL BEACON", color = AsteroidsGreen, fontFamily = AsteroidsFont, fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 1.sp)
+                Text("BUILDING...", color = AsteroidsGreen.copy(alpha = 0.6f), fontFamily = AsteroidsFont, fontSize = 11.sp)
+            }
+            Text(
+                text = "${formatDuration(remainingSecs)} remaining",
+                color = AsteroidsGreen.copy(alpha = 0.75f),
+                fontFamily = AsteroidsFont,
+                fontSize = 12.sp
+            )
+            Box(modifier = Modifier.fillMaxWidth().height(4.dp).background(AsteroidsGreen.copy(alpha = 0.12f))) {
+                Box(modifier = Modifier.fillMaxWidth(fraction = progress).height(4.dp).background(AsteroidsGreen.copy(alpha = 0.6f)))
+            }
+        }
+    }
+}
+
+private fun formatDuration(seconds: Long): String {
+    val h = seconds / 3600
+    val m = (seconds % 3600) / 60
+    val s = seconds % 60
+    return "%d:%02d:%02d".format(h, m, s)
 }
 
 @Composable
