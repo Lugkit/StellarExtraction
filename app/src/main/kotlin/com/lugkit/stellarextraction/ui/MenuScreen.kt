@@ -59,7 +59,7 @@ fun ShopTab(
         // ── MINING ────────────────────────────────────────────────────────────
         SectionLabel("MINING")
         MineUpgradeCard(
-            name             = "DRILL HEAD",
+            name             = if (state.drillHeadLevel == 0) "DRILLING RIG" else "DRILL HEAD",
             resourceLabel    = "iron",
             level            = state.drillHeadLevel,
             productionPerSec = state.ironPerSec,

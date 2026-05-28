@@ -114,11 +114,8 @@ data class GameState(
     val ironPerSec: Double get() =
         drillHeadIronRate(drillHeadLevel) * (1 + ascBonus(drillSpeedLevel))
 
-    val quartzBasePerSec: Double get() {
-        val fromDrill = if (drillHeadLevel >= 2) 1.5 * (1 + ascBonus(quartzRichnessLevel)) else 0.0
-        val fromVein  = quartzVeinQuartzRate(quartzVeinLevel) * (1 + ascBonus(quartzRichnessLevel))
-        return fromDrill + fromVein
-    }
+    val quartzBasePerSec: Double get() =
+        quartzVeinQuartzRate(quartzVeinLevel) * (1 + ascBonus(quartzRichnessLevel))
     val quartzUpkeep: Double     get() = if (powerCoreLevel >= 1) 1.0 else 0.0
     val quartzPerSec: Double     get() = quartzBasePerSec - quartzUpkeep
 
@@ -254,7 +251,7 @@ const val IRIDIUM_STORAGE_BASE  =    200.0
 const val XENON_STORAGE_BASE    =     50.0
 
 // ── Iron secondary cost base for mine upgrades (adjust after playtesting) ─────
-const val QUARTZ_VEIN_IRON_BASE     =    50.0
+const val QUARTZ_VEIN_IRON_BASE     =   500.0
 const val TITANIUM_SHAFT_IRON_BASE  =   200.0
 const val IRIDIUM_DEPOSIT_IRON_BASE = 1_000.0
 const val XENON_EXTRACTOR_IRON_BASE = 5_000.0
@@ -269,7 +266,10 @@ const val STORAGE_IRON_SELF_MULTIPLIER = 0.80  // iron silo total iron cost = ca
 private const val MINE_SCALE = 1.15
 
 fun drillHeadNextCost(level: Int)         = BuildCost(iron = 10.0 * Math.pow(MINE_SCALE, level.toDouble()))
-fun quartzVeinNextCost(level: Int)        = BuildCost(iron = QUARTZ_VEIN_IRON_BASE * Math.pow(MINE_SCALE, level.toDouble()), quartz = 50.0 * Math.pow(MINE_SCALE, level.toDouble()))
+fun quartzVeinNextCost(level: Int)        = if (level == 0)
+    BuildCost(iron = QUARTZ_VEIN_IRON_BASE)
+else
+    BuildCost(iron = QUARTZ_VEIN_IRON_BASE * Math.pow(MINE_SCALE, level.toDouble()), quartz = 50.0 * Math.pow(MINE_SCALE, level.toDouble()))
 fun titaniumShaftNextCost(level: Int)     = BuildCost(iron = TITANIUM_SHAFT_IRON_BASE * Math.pow(MINE_SCALE, level.toDouble()), quartz = 200.0 * Math.pow(MINE_SCALE, level.toDouble()))
 fun iridiumDepositNextCost(level: Int)    = BuildCost(iron = IRIDIUM_DEPOSIT_IRON_BASE * Math.pow(MINE_SCALE, level.toDouble()), titanium = 500.0 * Math.pow(MINE_SCALE, level.toDouble()))
 fun xenonExtractorNextCost(level: Int)    = BuildCost(iron = XENON_EXTRACTOR_IRON_BASE * Math.pow(MINE_SCALE, level.toDouble()), iridium = 2_000.0 * Math.pow(MINE_SCALE, level.toDouble()), xenon = 200.0 * Math.pow(MINE_SCALE, level.toDouble()))
