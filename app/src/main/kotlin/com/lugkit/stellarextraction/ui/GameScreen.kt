@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lugkit.stellarextraction.GameState
 import com.lugkit.stellarextraction.GameViewModel
+import com.lugkit.stellarextraction.OfflineSummary
 import com.lugkit.stellarextraction.Resource
 import kotlin.math.cos
 import kotlin.math.floor
@@ -87,6 +88,7 @@ fun GameScreen(vm: GameViewModel) {
 @Composable
 private fun MineContent(vm: GameViewModel) {
     val state by vm.state.collectAsState()
+    val offlineSummary by vm.offlineSummary.collectAsState()
     var showResetDialog by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -150,19 +152,19 @@ private fun MineContent(vm: GameViewModel) {
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        ResourceItem("IRON",   state.iron,   state.ironPerSec) { vm.focusedStrike(Resource.IRON) }
+                        ResourceItem("IRON",   state.iron,   state.ironPerSec,   state.ironCap) { vm.focusedStrike(Resource.IRON) }
                         if (state.quartzVisible)
-                            ResourceItem("QUARTZ", state.quartz, state.quartzPerSec) { vm.focusedStrike(Resource.QUARTZ) }
+                            ResourceItem("QUARTZ", state.quartz, state.quartzPerSec, state.quartzCap) { vm.focusedStrike(Resource.QUARTZ) }
                         if (state.energyVisible)
                             ResourceItem("ENERGY", state.energy, state.energyPerSec) { vm.focusedStrike(Resource.ENERGY) }
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         if (state.titaniumVisible)
-                            ResourceItem("TITAN",   state.titanium, state.titaniumPerSec) { vm.focusedStrike(Resource.TITANIUM) }
+                            ResourceItem("TITAN",   state.titanium, state.titaniumPerSec, state.titaniumCap) { vm.focusedStrike(Resource.TITANIUM) }
                         if (state.iridiumVisible)
-                            ResourceItem("IRIDIUM", state.iridium,  state.iridiumPerSec)  { vm.focusedStrike(Resource.IRIDIUM) }
+                            ResourceItem("IRIDIUM", state.iridium,  state.iridiumPerSec,  state.iridiumCap)  { vm.focusedStrike(Resource.IRIDIUM) }
                         if (state.xenonVisible)
-                            ResourceItem("XENON",   state.xenon,    state.xenonPerSec)    { vm.focusedStrike(Resource.XENON) }
+                            ResourceItem("XENON",   state.xenon,    state.xenonPerSec,    state.xenonCap)    { vm.focusedStrike(Resource.XENON) }
                         if (state.stellarShardsVisible)
                             ResourceItem("SHARDS", state.stellarShards.toDouble(), 0.0)
                     }
@@ -192,6 +194,10 @@ private fun MineContent(vm: GameViewModel) {
                 onConfirm = { vm.hardReset(); showResetDialog = false },
                 onDismiss = { showResetDialog = false }
             )
+        }
+
+        offlineSummary?.let { summary ->
+            OfflineSummaryDialog(summary = summary, onDismiss = vm::dismissOfflineSummary)
         }
     }
 }
@@ -225,7 +231,12 @@ private fun ShopContent(vm: GameViewModel) {
                 onBuyPlanetCore          = vm::buyPlanetCore,
                 onBuyOrbitalBeacon       = vm::buyOrbitalBeacon,
                 onAscend                 = vm::ascend,
-                onRefineryConvert        = vm::refineryConvert
+                onRefineryConvert        = vm::refineryConvert,
+                onBuyIronStorage         = vm::buyIronStorage,
+                onBuyQuartzStorage       = vm::buyQuartzStorage,
+                onBuyTitaniumStorage     = vm::buyTitaniumStorage,
+                onBuyIridiumStorage      = vm::buyIridiumStorage,
+                onBuyXenonStorage        = vm::buyXenonStorage
             )
         }
     }
@@ -344,7 +355,7 @@ fun NavLink(label: String, active: Boolean = false, onClick: () -> Unit) {
 }
 
 @Composable
-fun ResourceItem(label: String, amount: Double, rate: Double, onTap: (() -> Unit)? = null) {
+fun ResourceItem(label: String, amount: Double, rate: Double, cap: Double = Double.MAX_VALUE, onTap: (() -> Unit)? = null) {
     var tapped by remember { mutableStateOf(false) }
     val labelAlpha by animateFloatAsState(
         targetValue = if (tapped) 1f else 0.45f,
@@ -361,7 +372,14 @@ fun ResourceItem(label: String, amount: Double, rate: Double, onTap: (() -> Unit
         verticalArrangement = Arrangement.spacedBy(1.dp)
     ) {
         Text(text = label, color = AsteroidsGreen.copy(alpha = labelAlpha), fontFamily = AsteroidsFont, fontSize = 11.sp, letterSpacing = 1.sp)
-        Text(text = formatNumber(amount), color = AsteroidsGreen, fontFamily = AsteroidsFont, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        if (cap < Double.MAX_VALUE) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(text = formatNumber(amount), color = AsteroidsGreen, fontFamily = AsteroidsFont, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(text = "/${formatNumber(cap)}", color = AsteroidsGreen.copy(alpha = 0.28f), fontFamily = AsteroidsFont, fontSize = 8.sp)
+            }
+        } else {
+            Text(text = formatNumber(amount), color = AsteroidsGreen, fontFamily = AsteroidsFont, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        }
         if (rate > 0) {
             Text(text = "+${formatRate(rate)}/s", color = AsteroidsGreen.copy(alpha = 0.5f), fontFamily = AsteroidsFont, fontSize = 8.sp)
         }
@@ -676,4 +694,77 @@ fun formatNumber(n: Double): String = when {
     n >= 1_000_000     -> "%.1fM".format(n / 1_000_000)
     n >= 1_000         -> "%.1fK".format(n / 1_000)
     else               -> floor(n).toInt().toString()
+}
+
+@Composable
+private fun OfflineSummaryDialog(summary: OfflineSummary, onDismiss: () -> Unit) {
+    val h = (summary.seconds / 3600).toInt()
+    val m = ((summary.seconds % 3600) / 60).toInt()
+    val timeText = if (h > 0) "${h}h ${m}m" else "${m}m"
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.88f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onDismiss
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(0.82f)
+                .border(1.dp, AsteroidsGreen.copy(alpha = 0.6f), RoundedCornerShape(2.dp))
+                .background(Color.Black)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {}
+                )
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "OFFLINE  $timeText",
+                color = AsteroidsGreen,
+                fontFamily = AsteroidsFont,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                letterSpacing = 3.sp
+            )
+            Text(
+                text = "Production decayed while inactive",
+                color = AsteroidsGreen.copy(alpha = 0.4f),
+                fontFamily = AsteroidsFont,
+                fontSize = 9.sp
+            )
+            HRule()
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                if (summary.iron     >= 1.0)  OfflineLine("IRON",     summary.iron)
+                if (summary.quartz   >= 0.5)  OfflineLine("QUARTZ",   summary.quartz)
+                if (summary.titanium >= 0.1)  OfflineLine("TITANIUM", summary.titanium)
+                if (summary.iridium  >= 0.1)  OfflineLine("IRIDIUM",  summary.iridium)
+                if (summary.xenon    >= 0.01) OfflineLine("XENON",    summary.xenon)
+            }
+            Spacer(Modifier.height(4.dp))
+            NavLink("OK") { onDismiss() }
+        }
+    }
+}
+
+@Composable
+private fun OfflineLine(label: String, amount: Double) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, color = AsteroidsGreen.copy(alpha = 0.55f), fontFamily = AsteroidsFont, fontSize = 10.sp, letterSpacing = 1.sp)
+        Text("+${formatNumber(amount)}", color = AsteroidsGreen, fontFamily = AsteroidsFont, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+    }
 }

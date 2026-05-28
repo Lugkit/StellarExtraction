@@ -42,7 +42,12 @@ fun ShopTab(
     onBuyPlanetCore: () -> Unit,
     onBuyOrbitalBeacon: () -> Unit,
     onAscend: () -> Unit,
-    onRefineryConvert: (Resource) -> Unit
+    onRefineryConvert: (Resource) -> Unit,
+    onBuyIronStorage: () -> Unit,
+    onBuyQuartzStorage: () -> Unit,
+    onBuyTitaniumStorage: () -> Unit,
+    onBuyIridiumStorage: () -> Unit,
+    onBuyXenonStorage: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -73,6 +78,33 @@ fun ShopTab(
                 onClick          = onBuyQuartzVein
             )
         }
+
+        // ── STORAGE ───────────────────────────────────────────────────────────
+        SectionLabel("STORAGE")
+        StorageUpgradeCard(
+            name = "IRON STORAGE", currentCap = state.ironCap, nextCap = state.ironCap * 2,
+            cost = BuildCost(iron = state.ironCap * 2.5), state = state, onClick = onBuyIronStorage
+        )
+        if (state.quartzVisible) StorageUpgradeCard(
+            name = "QUARTZ STORAGE", currentCap = state.quartzCap, nextCap = state.quartzCap * 2,
+            cost = BuildCost(iron = state.quartzCap * 2.0, quartz = state.quartzCap * 0.5),
+            state = state, onClick = onBuyQuartzStorage
+        )
+        if (state.titaniumVisible) StorageUpgradeCard(
+            name = "TITANIUM STORAGE", currentCap = state.titaniumCap, nextCap = state.titaniumCap * 2,
+            cost = BuildCost(iron = state.titaniumCap * 2.0, titanium = state.titaniumCap * 0.5),
+            state = state, onClick = onBuyTitaniumStorage
+        )
+        if (state.iridiumVisible) StorageUpgradeCard(
+            name = "IRIDIUM STORAGE", currentCap = state.iridiumCap, nextCap = state.iridiumCap * 2,
+            cost = BuildCost(iron = state.iridiumCap * 2.0, iridium = state.iridiumCap * 0.5),
+            state = state, onClick = onBuyIridiumStorage
+        )
+        if (state.xenonVisible) StorageUpgradeCard(
+            name = "XENON STORAGE", currentCap = state.xenonCap, nextCap = state.xenonCap * 2,
+            cost = BuildCost(iron = state.xenonCap * 2.0, xenon = state.xenonCap * 0.5),
+            state = state, onClick = onBuyXenonStorage
+        )
 
         // ── ENERGY ────────────────────────────────────────────────────────────
         if (state.drillHeadLevel >= 2) {
@@ -176,7 +208,7 @@ fun ShopTab(
             if (state.deepShaftLevel >= 1) {
                 UpgradeCard(
                     name        = "LAUNCH SILO",
-                    description = "Path A — titanium-heavy",
+                    description = "Reinforced — iron + titanium",
                     levelLabel  = "BUILD",
                     cost        = state.effectiveLaunchSiloCostA(),
                     state       = state,
@@ -185,7 +217,7 @@ fun ShopTab(
             }
             UpgradeCard(
                 name        = "LAUNCH SILO",
-                description = "Path B — no titanium required",
+                description = "Standard — iron + quartz",
                 levelLabel  = "BUILD",
                 cost        = state.effectiveLaunchSiloCostB(),
                 state       = state,
@@ -375,6 +407,25 @@ private fun MineUpgradeCard(
             }
         }
     }
+}
+
+@Composable
+private fun StorageUpgradeCard(
+    name: String,
+    currentCap: Double,
+    nextCap: Double,
+    cost: BuildCost,
+    state: GameState,
+    onClick: () -> Unit
+) {
+    UpgradeCard(
+        name        = name,
+        description = "${formatNumber(currentCap)} → ${formatNumber(nextCap)}",
+        levelLabel  = "EXPAND",
+        cost        = cost,
+        state       = state,
+        onClick     = onClick
+    )
 }
 
 @Composable

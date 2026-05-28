@@ -87,6 +87,13 @@ data class GameState(
     val iridiumDepositLevel: Int = 0,
     val xenonExtractorLevel: Int = 0,
 
+    // ── Storage levels (reset on ascension) ──────────────────────────────────
+    val ironStorageLevel: Int = 0,
+    val quartzStorageLevel: Int = 0,
+    val titaniumStorageLevel: Int = 0,
+    val iridiumStorageLevel: Int = 0,
+    val xenonStorageLevel: Int = 0,
+
     // ── Ascension upgrades (persist across runs) ──────────────────────────────
     val strikeYieldLevel: Int = 0,
     val drillSpeedLevel: Int = 0,
@@ -145,6 +152,13 @@ data class GameState(
     val xenonVisible: Boolean         get() = hasAsteroidMiner
     val stellarShardsVisible: Boolean get() = stellarShards > 0
 
+    // ── Storage caps ──────────────────────────────────────────────────────────
+    val ironCap: Double     get() = IRON_STORAGE_BASE     * Math.pow(2.0, ironStorageLevel.toDouble())
+    val quartzCap: Double   get() = QUARTZ_STORAGE_BASE   * Math.pow(2.0, quartzStorageLevel.toDouble())
+    val titaniumCap: Double get() = TITANIUM_STORAGE_BASE * Math.pow(2.0, titaniumStorageLevel.toDouble())
+    val iridiumCap: Double  get() = IRIDIUM_STORAGE_BASE  * Math.pow(2.0, iridiumStorageLevel.toDouble())
+    val xenonCap: Double    get() = XENON_STORAGE_BASE    * Math.pow(2.0, xenonStorageLevel.toDouble())
+
     // ── Ascension upgrade level lookup ────────────────────────────────────────
     fun ascLevel(u: AscUpgrade): Int = when (u) {
         AscUpgrade.STRIKE_YIELD          -> strikeYieldLevel
@@ -184,13 +198,25 @@ data class GameState(
     )
 
     fun applyProduction(seconds: Double): GameState = copy(
-        iron     = iron     + ironPerSec     * seconds,
-        quartz   = (quartz  + quartzPerSec   * seconds).coerceAtLeast(0.0),
+        iron     = (iron     + ironPerSec     * seconds).coerceIn(0.0, ironCap),
+        quartz   = (quartz   + quartzPerSec   * seconds).coerceAtLeast(0.0).coerceAtMost(quartzCap),
         energy   = energy   + energyPerSec   * seconds,
-        titanium = titanium + titaniumPerSec * seconds,
-        iridium  = iridium  + iridiumPerSec  * seconds,
-        xenon    = xenon    + xenonPerSec    * seconds
+        titanium = (titanium + titaniumPerSec * seconds).coerceIn(0.0, titaniumCap),
+        iridium  = (iridium  + iridiumPerSec  * seconds).coerceIn(0.0, iridiumCap),
+        xenon    = (xenon    + xenonPerSec    * seconds).coerceIn(0.0, xenonCap)
     )
+
+    fun applyProductionDecay(elapsed: Double): GameState {
+        val factor = OFFLINE_DECAY_TAU * (1.0 - Math.exp(-elapsed / OFFLINE_DECAY_TAU))
+        return copy(
+            iron     = (iron     + ironPerSec     * factor).coerceIn(0.0, ironCap),
+            quartz   = (quartz   + quartzPerSec   * factor).coerceAtLeast(0.0).coerceAtMost(quartzCap),
+            energy   = energy   + energyPerSec   * factor,
+            titanium = (titanium + titaniumPerSec * factor).coerceIn(0.0, titaniumCap),
+            iridium  = (iridium  + iridiumPerSec  * factor).coerceIn(0.0, iridiumCap),
+            xenon    = (xenon    + xenonPerSec    * factor).coerceIn(0.0, xenonCap)
+        )
+    }
 
     // Copy all ascension upgrades (used by ascend())
     fun ascFields() = listOf(
@@ -217,15 +243,31 @@ fun beaconBuildSeconds(stellarShards: Int): Long =
     BEACON_BASE_TIME + stellarShards.toLong() * BEACON_TIME_INCREMENT
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── Offline decay config (adjust after playtesting) ───────────────────────────
+const val OFFLINE_DECAY_TAU     = 6500.0    // seconds; production ≈ 6% at 5 hours
+
+// ── Base storage caps, level 0 (adjust after playtesting) ────────────────────
+const val IRON_STORAGE_BASE     = 10_000.0
+const val QUARTZ_STORAGE_BASE   =  2_000.0
+const val TITANIUM_STORAGE_BASE =    500.0
+const val IRIDIUM_STORAGE_BASE  =    200.0
+const val XENON_STORAGE_BASE    =     50.0
+
+// ── Iron secondary cost base for mine upgrades (adjust after playtesting) ─────
+const val QUARTZ_VEIN_IRON_BASE     =    50.0
+const val TITANIUM_SHAFT_IRON_BASE  =   200.0
+const val IRIDIUM_DEPOSIT_IRON_BASE = 1_000.0
+const val XENON_EXTRACTOR_IRON_BASE = 5_000.0
+
 // ── Continuous mine helpers ───────────────────────────────────────────────────
 
 private const val MINE_SCALE = 1.15
 
 fun drillHeadNextCost(level: Int)         = BuildCost(iron = 10.0 * Math.pow(MINE_SCALE, level.toDouble()))
-fun quartzVeinNextCost(level: Int)        = BuildCost(iron = 200.0 * Math.pow(MINE_SCALE, level.toDouble()), quartz = 50.0 * Math.pow(MINE_SCALE, level.toDouble()))
-fun titaniumShaftNextCost(level: Int)     = BuildCost(iron = 1_000.0 * Math.pow(MINE_SCALE, level.toDouble()), quartz = 200.0 * Math.pow(MINE_SCALE, level.toDouble()))
-fun iridiumDepositNextCost(level: Int)    = BuildCost(iron = 5_000.0 * Math.pow(MINE_SCALE, level.toDouble()), titanium = 500.0 * Math.pow(MINE_SCALE, level.toDouble()))
-fun xenonExtractorNextCost(level: Int)    = BuildCost(iridium = 2_000.0 * Math.pow(MINE_SCALE, level.toDouble()), xenon = 200.0 * Math.pow(MINE_SCALE, level.toDouble()))
+fun quartzVeinNextCost(level: Int)        = BuildCost(iron = QUARTZ_VEIN_IRON_BASE * Math.pow(MINE_SCALE, level.toDouble()), quartz = 50.0 * Math.pow(MINE_SCALE, level.toDouble()))
+fun titaniumShaftNextCost(level: Int)     = BuildCost(iron = TITANIUM_SHAFT_IRON_BASE * Math.pow(MINE_SCALE, level.toDouble()), quartz = 200.0 * Math.pow(MINE_SCALE, level.toDouble()))
+fun iridiumDepositNextCost(level: Int)    = BuildCost(iron = IRIDIUM_DEPOSIT_IRON_BASE * Math.pow(MINE_SCALE, level.toDouble()), titanium = 500.0 * Math.pow(MINE_SCALE, level.toDouble()))
+fun xenonExtractorNextCost(level: Int)    = BuildCost(iron = XENON_EXTRACTOR_IRON_BASE * Math.pow(MINE_SCALE, level.toDouble()), iridium = 2_000.0 * Math.pow(MINE_SCALE, level.toDouble()), xenon = 200.0 * Math.pow(MINE_SCALE, level.toDouble()))
 
 fun drillHeadIronRate(level: Int)         = if (level == 0) 0.0 else 1.0 * Math.pow(MINE_SCALE, level.toDouble())
 fun quartzVeinQuartzRate(level: Int)      = if (level == 0) 0.0 else 0.5 * Math.pow(MINE_SCALE, level.toDouble())
@@ -257,6 +299,15 @@ val refineryRates = mapOf(
     Resource.QUARTZ   to Pair(BuildCost(quartz   = 1.0), BuildCost(iron     = 5.0))
 )
 
+data class OfflineSummary(
+    val seconds: Double,
+    val iron: Double = 0.0,
+    val quartz: Double = 0.0,
+    val titanium: Double = 0.0,
+    val iridium: Double = 0.0,
+    val xenon: Double = 0.0
+)
+
 // ── ViewModel ─────────────────────────────────────────────────────────────────
 
 class GameViewModel(application: Application) : AndroidViewModel(application) {
@@ -264,6 +315,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _state = MutableStateFlow(GameState())
     val state: StateFlow<GameState> = _state.asStateFlow()
+
+    private val _offlineSummary = MutableStateFlow<OfflineSummary?>(null)
+    val offlineSummary: StateFlow<OfflineSummary?> = _offlineSummary.asStateFlow()
 
     init {
         loadAndApplyOfflineProgress()
@@ -307,6 +361,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 put("titaniumShaftLevel", s.titaniumShaftLevel)
                 put("iridiumDepositLevel", s.iridiumDepositLevel)
                 put("xenonExtractorLevel", s.xenonExtractorLevel)
+                put("ironStorageLevel", s.ironStorageLevel)
+                put("quartzStorageLevel", s.quartzStorageLevel)
+                put("titaniumStorageLevel", s.titaniumStorageLevel)
+                put("iridiumStorageLevel", s.iridiumStorageLevel)
+                put("xenonStorageLevel", s.xenonStorageLevel)
                 // Ascension upgrades
                 put("asc_strikeYield", s.strikeYieldLevel)
                 put("asc_drillSpeed", s.drillSpeedLevel)
@@ -333,7 +392,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             val raw = prefs.getString("game_state", null) ?: return
             val obj = JSONObject(raw)
             val savedAt = obj.getLong("savedAt")
-            val elapsed = min((System.currentTimeMillis() - savedAt) / 1000.0, 8.0 * 3600)
+            val elapsed = (System.currentTimeMillis() - savedAt) / 1000.0
             val s = GameState(
                 iron                   = obj.getDouble("iron"),
                 quartz                 = obj.getDouble("quartz"),
@@ -361,6 +420,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 titaniumShaftLevel      = obj.optInt("titaniumShaftLevel", 0),
                 iridiumDepositLevel     = obj.optInt("iridiumDepositLevel", 0),
                 xenonExtractorLevel     = obj.optInt("xenonExtractorLevel", 0),
+                ironStorageLevel        = obj.optInt("ironStorageLevel", 0),
+                quartzStorageLevel      = obj.optInt("quartzStorageLevel", 0),
+                titaniumStorageLevel    = obj.optInt("titaniumStorageLevel", 0),
+                iridiumStorageLevel     = obj.optInt("iridiumStorageLevel", 0),
+                xenonStorageLevel       = obj.optInt("xenonStorageLevel", 0),
                 // Ascension upgrades
                 strikeYieldLevel          = obj.optInt("asc_strikeYield", 0),
                 drillSpeedLevel           = obj.optInt("asc_drillSpeed", 0),
@@ -377,10 +441,21 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 headStartLevel            = obj.optInt("asc_headStart", 0),
                 resonanceLevel            = obj.optInt("asc_resonance", 0)
             )
-            val withProd = if (elapsed > 1) s.applyProduction(elapsed) else s
-            _state.value = if (!withProd.hasOrbitalBeacon && withProd.beaconCompleteAt > 0L && System.currentTimeMillis() >= withProd.beaconCompleteAt)
+            val withProd = if (elapsed > 1) s.applyProductionDecay(elapsed) else s
+            val withBeacon = if (!withProd.hasOrbitalBeacon && withProd.beaconCompleteAt > 0L && System.currentTimeMillis() >= withProd.beaconCompleteAt)
                 withProd.copy(hasOrbitalBeacon = true, beaconCompleteAt = 0L)
             else withProd
+            _state.value = withBeacon
+            if (elapsed > 30) {
+                _offlineSummary.value = OfflineSummary(
+                    seconds  = elapsed,
+                    iron     = (withBeacon.iron     - s.iron    ).coerceAtLeast(0.0),
+                    quartz   = (withBeacon.quartz   - s.quartz  ).coerceAtLeast(0.0),
+                    titanium = (withBeacon.titanium - s.titanium).coerceAtLeast(0.0),
+                    iridium  = (withBeacon.iridium  - s.iridium ).coerceAtLeast(0.0),
+                    xenon    = (withBeacon.xenon    - s.xenon   ).coerceAtLeast(0.0)
+                )
+            }
         } catch (_: Exception) {}
     }
 
@@ -390,12 +465,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = _state.value.let { s ->
             val mult = 0.5 * (1 + ascBonus(s.strikeYieldLevel))
             s.copy(
-                iron     = s.iron     + max(1.0, s.ironPerSec)               * mult,
-                quartz   = (s.quartz  + s.quartzPerSec                       * mult).coerceAtLeast(0.0),
-                energy   = s.energy   + s.energyPerSec                       * mult,
-                titanium = s.titanium + s.titaniumPerSec                     * mult,
-                iridium  = s.iridium  + s.iridiumPerSec                      * mult,
-                xenon    = s.xenon    + s.xenonPerSec                        * mult
+                iron     = (s.iron     + max(1.0, s.ironPerSec)   * mult).coerceAtMost(s.ironCap),
+                quartz   = (s.quartz   + s.quartzPerSec           * mult).coerceAtLeast(0.0).coerceAtMost(s.quartzCap),
+                energy   = s.energy   + s.energyPerSec            * mult,
+                titanium = (s.titanium + s.titaniumPerSec         * mult).coerceAtMost(s.titaniumCap),
+                iridium  = (s.iridium  + s.iridiumPerSec          * mult).coerceAtMost(s.iridiumCap),
+                xenon    = (s.xenon    + s.xenonPerSec            * mult).coerceAtMost(s.xenonCap)
             )
         }
     }
@@ -404,12 +479,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = _state.value.let { s ->
             val mult = 1.5 * (1 + ascBonus(s.resonanceLevel))
             when (resource) {
-                Resource.IRON     -> s.copy(iron     = s.iron     + max(1.0, s.ironPerSec)               * mult)
-                Resource.QUARTZ   -> s.copy(quartz   = (s.quartz  + s.quartzPerSec.coerceAtLeast(0.0)   * mult).coerceAtLeast(0.0))
-                Resource.ENERGY   -> s.copy(energy   = s.energy   + s.energyPerSec                       * mult)
-                Resource.TITANIUM -> s.copy(titanium = s.titanium + s.titaniumPerSec                     * mult)
-                Resource.IRIDIUM  -> s.copy(iridium  = s.iridium  + s.iridiumPerSec                      * mult)
-                Resource.XENON    -> s.copy(xenon    = s.xenon    + s.xenonPerSec                        * mult)
+                Resource.IRON     -> s.copy(iron     = (s.iron     + max(1.0, s.ironPerSec)            * mult).coerceAtMost(s.ironCap))
+                Resource.QUARTZ   -> s.copy(quartz   = (s.quartz   + s.quartzPerSec.coerceAtLeast(0.0) * mult).coerceAtLeast(0.0).coerceAtMost(s.quartzCap))
+                Resource.ENERGY   -> s.copy(energy   = s.energy   + s.energyPerSec                     * mult)
+                Resource.TITANIUM -> s.copy(titanium = (s.titanium + s.titaniumPerSec                  * mult).coerceAtMost(s.titaniumCap))
+                Resource.IRIDIUM  -> s.copy(iridium  = (s.iridium  + s.iridiumPerSec                   * mult).coerceAtMost(s.iridiumCap))
+                Resource.XENON    -> s.copy(xenon    = (s.xenon    + s.xenonPerSec                     * mult).coerceAtMost(s.xenonCap))
             }
         }
     }
@@ -625,6 +700,49 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         )
         saveState()
     }
+
+    // ── Storage upgrades ──────────────────────────────────────────────────────
+
+    fun buyIronStorage() {
+        val s = _state.value
+        val cost = BuildCost(iron = s.ironCap * 2.5)
+        if (!s.canAfford(cost)) return
+        _state.value = s.spend(cost).copy(ironStorageLevel = s.ironStorageLevel + 1)
+    }
+
+    fun buyQuartzStorage() {
+        val s = _state.value
+        if (!s.quartzVisible) return
+        val cost = BuildCost(iron = s.quartzCap * 2.0, quartz = s.quartzCap * 0.5)
+        if (!s.canAfford(cost)) return
+        _state.value = s.spend(cost).copy(quartzStorageLevel = s.quartzStorageLevel + 1)
+    }
+
+    fun buyTitaniumStorage() {
+        val s = _state.value
+        if (!s.titaniumVisible) return
+        val cost = BuildCost(iron = s.titaniumCap * 2.0, titanium = s.titaniumCap * 0.5)
+        if (!s.canAfford(cost)) return
+        _state.value = s.spend(cost).copy(titaniumStorageLevel = s.titaniumStorageLevel + 1)
+    }
+
+    fun buyIridiumStorage() {
+        val s = _state.value
+        if (!s.iridiumVisible) return
+        val cost = BuildCost(iron = s.iridiumCap * 2.0, iridium = s.iridiumCap * 0.5)
+        if (!s.canAfford(cost)) return
+        _state.value = s.spend(cost).copy(iridiumStorageLevel = s.iridiumStorageLevel + 1)
+    }
+
+    fun buyXenonStorage() {
+        val s = _state.value
+        if (!s.xenonVisible) return
+        val cost = BuildCost(iron = s.xenonCap * 2.0, xenon = s.xenonCap * 0.5)
+        if (!s.canAfford(cost)) return
+        _state.value = s.spend(cost).copy(xenonStorageLevel = s.xenonStorageLevel + 1)
+    }
+
+    fun dismissOfflineSummary() { _offlineSummary.value = null }
 
     fun hardReset() {
         _state.value = GameState()
