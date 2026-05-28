@@ -259,6 +259,11 @@ const val TITANIUM_SHAFT_IRON_BASE  =   200.0
 const val IRIDIUM_DEPOSIT_IRON_BASE = 1_000.0
 const val XENON_EXTRACTOR_IRON_BASE = 5_000.0
 
+// ── Storage upgrade cost multipliers (adjust after playtesting) ───────────────
+const val STORAGE_RESOURCE_MULTIPLIER  = 0.80  // primary resource cost = cap × this
+const val STORAGE_IRON_MULTIPLIER      = 0.25  // iron secondary cost = cap × this
+const val STORAGE_IRON_SELF_MULTIPLIER = 0.80  // iron silo total iron cost = cap × this
+
 // ── Continuous mine helpers ───────────────────────────────────────────────────
 
 private const val MINE_SCALE = 1.15
@@ -705,7 +710,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun buyIronStorage() {
         val s = _state.value
-        val cost = BuildCost(iron = s.ironCap * 2.5)
+        val cost = BuildCost(iron = s.ironCap * STORAGE_IRON_SELF_MULTIPLIER)
         if (!s.canAfford(cost)) return
         _state.value = s.spend(cost).copy(ironStorageLevel = s.ironStorageLevel + 1)
     }
@@ -713,7 +718,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun buyQuartzStorage() {
         val s = _state.value
         if (!s.quartzVisible) return
-        val cost = BuildCost(iron = s.quartzCap * 2.0, quartz = s.quartzCap * 0.5)
+        val cost = BuildCost(iron = s.quartzCap * STORAGE_IRON_MULTIPLIER, quartz = s.quartzCap * STORAGE_RESOURCE_MULTIPLIER)
         if (!s.canAfford(cost)) return
         _state.value = s.spend(cost).copy(quartzStorageLevel = s.quartzStorageLevel + 1)
     }
@@ -721,7 +726,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun buyTitaniumStorage() {
         val s = _state.value
         if (!s.titaniumVisible) return
-        val cost = BuildCost(iron = s.titaniumCap * 2.0, titanium = s.titaniumCap * 0.5)
+        val cost = BuildCost(iron = s.titaniumCap * STORAGE_IRON_MULTIPLIER, titanium = s.titaniumCap * STORAGE_RESOURCE_MULTIPLIER)
         if (!s.canAfford(cost)) return
         _state.value = s.spend(cost).copy(titaniumStorageLevel = s.titaniumStorageLevel + 1)
     }
@@ -729,7 +734,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun buyIridiumStorage() {
         val s = _state.value
         if (!s.iridiumVisible) return
-        val cost = BuildCost(iron = s.iridiumCap * 2.0, iridium = s.iridiumCap * 0.5)
+        val cost = BuildCost(iron = s.iridiumCap * STORAGE_IRON_MULTIPLIER, iridium = s.iridiumCap * STORAGE_RESOURCE_MULTIPLIER)
         if (!s.canAfford(cost)) return
         _state.value = s.spend(cost).copy(iridiumStorageLevel = s.iridiumStorageLevel + 1)
     }
@@ -737,7 +742,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun buyXenonStorage() {
         val s = _state.value
         if (!s.xenonVisible) return
-        val cost = BuildCost(iron = s.xenonCap * 2.0, xenon = s.xenonCap * 0.5)
+        val cost = BuildCost(iron = s.xenonCap * STORAGE_IRON_MULTIPLIER, xenon = s.xenonCap * STORAGE_RESOURCE_MULTIPLIER)
         if (!s.canAfford(cost)) return
         _state.value = s.spend(cost).copy(xenonStorageLevel = s.xenonStorageLevel + 1)
     }

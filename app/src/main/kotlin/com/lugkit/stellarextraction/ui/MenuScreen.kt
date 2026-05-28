@@ -83,26 +83,27 @@ fun ShopTab(
         SectionLabel("STORAGE")
         StorageUpgradeCard(
             name = "IRON STORAGE", currentCap = state.ironCap, nextCap = state.ironCap * 2,
-            cost = BuildCost(iron = state.ironCap * 2.5), state = state, onClick = onBuyIronStorage
+            cost = BuildCost(iron = state.ironCap * STORAGE_IRON_SELF_MULTIPLIER),
+            state = state, onClick = onBuyIronStorage
         )
         if (state.quartzVisible) StorageUpgradeCard(
             name = "QUARTZ STORAGE", currentCap = state.quartzCap, nextCap = state.quartzCap * 2,
-            cost = BuildCost(iron = state.quartzCap * 2.0, quartz = state.quartzCap * 0.5),
+            cost = BuildCost(iron = state.quartzCap * STORAGE_IRON_MULTIPLIER, quartz = state.quartzCap * STORAGE_RESOURCE_MULTIPLIER),
             state = state, onClick = onBuyQuartzStorage
         )
         if (state.titaniumVisible) StorageUpgradeCard(
             name = "TITANIUM STORAGE", currentCap = state.titaniumCap, nextCap = state.titaniumCap * 2,
-            cost = BuildCost(iron = state.titaniumCap * 2.0, titanium = state.titaniumCap * 0.5),
+            cost = BuildCost(iron = state.titaniumCap * STORAGE_IRON_MULTIPLIER, titanium = state.titaniumCap * STORAGE_RESOURCE_MULTIPLIER),
             state = state, onClick = onBuyTitaniumStorage
         )
         if (state.iridiumVisible) StorageUpgradeCard(
             name = "IRIDIUM STORAGE", currentCap = state.iridiumCap, nextCap = state.iridiumCap * 2,
-            cost = BuildCost(iron = state.iridiumCap * 2.0, iridium = state.iridiumCap * 0.5),
+            cost = BuildCost(iron = state.iridiumCap * STORAGE_IRON_MULTIPLIER, iridium = state.iridiumCap * STORAGE_RESOURCE_MULTIPLIER),
             state = state, onClick = onBuyIridiumStorage
         )
         if (state.xenonVisible) StorageUpgradeCard(
             name = "XENON STORAGE", currentCap = state.xenonCap, nextCap = state.xenonCap * 2,
-            cost = BuildCost(iron = state.xenonCap * 2.0, xenon = state.xenonCap * 0.5),
+            cost = BuildCost(iron = state.xenonCap * STORAGE_IRON_MULTIPLIER, xenon = state.xenonCap * STORAGE_RESOURCE_MULTIPLIER),
             state = state, onClick = onBuyXenonStorage
         )
 
